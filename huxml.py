@@ -182,6 +182,16 @@ def _splitPossiblyQualifiedName(name, value):
     # TODO: validate that all parts are NCNAMEs.
     return result
 
+def _joinPossiblyQualifiedName(namespace, name):
+    _assertIsUnicode(u"namespace", namespace)
+    assert name
+    _assertIsUnicode(u"name", name)
+    if namespace:
+        result = u"%s:%s" % (namespace, name)
+    else:
+        result = name
+    return result
+    
 class XmlWriter(object):
     _CLOSE_NONE = u"none"
     _CLOSE_AT_START = u"start"
@@ -337,16 +347,77 @@ class XmlWriter(object):
             self.newline()
 
     def startElement(self, qualifiedName, attributes={}):
+        """
+        Start element with name `qualifiedName`, optionally using a namespace
+        prefix separated with a colon (:) and `attributes`.
+        
+        Example names are "img" and "xhtml:img" (assuming the namespace prefix
+        "xtml" has been added before using `addNamespace()`).
+        
+        Attributes are a dictionary containing the attribute name and value, for
+        example:
+        
+        {
+            "src": "../some.png",
+            "xhtml:alt": "some image"
+        }
+        """
         uniQualifiedName = self._unicoded(qualifiedName)
         namespace, name = _splitPossiblyQualifiedName(u"element name", uniQualifiedName)
         self._writeElement(namespace, name, XmlWriter._CLOSE_NONE, attributes)
         self._elementStack.append((namespace, name))
 
-    def endElement(self):
+    def endElement(self, expectedQualifiedName=None):
+        """
+        End element that has been started before using `startElement`,
+        optionally checking that the name matches `expectedQualifiedName`.
+
+        As example, consider the following writer with a name space:
+        
+            >>> from StringIO import StringIO
+            >>> out = StringIO()
+            >>> xml = XmlWriter(out)
+            >>> xml.addNamespace("xhtml", "http://www.w3.org/1999/xhtml")
+        
+            Now start a couple of elements:
+            
+            >>> xml.startElement("html")
+            >>> xml.startElement("head")
+            >>> xml.startElement("xhtml:body")
+
+            Try to end a mistyped element:
+
+            >>> xml.endElement("xhtml:doby")
+            Traceback (most recent call last):
+                ...
+            XmlError: element name must be xhtml:doby but is xhtml:body
+
+            Try again properly:
+    
+            >>> xml.endElement("xhtml:body")
+            
+            End an element without an expected name:
+            
+            >>> xml.endElement()
+
+            Try to end another mistyped element, this time without namespace:
+
+            >>> xml.endElement("xml")
+            Traceback (most recent call last):
+                ...
+            XmlError: element name must be xml but is html
+        """
         try:
             (namespace, name) = self._elementStack.pop()
         except IndexError:
             raise XmlError(u"element stack must not be empty")
+        if expectedQualifiedName:
+            # Validate that actual element name matches expected name.
+            uniExpectedQualifiedName = self._unicoded(expectedQualifiedName)
+            actualQualifiedName = _joinPossiblyQualifiedName(namespace, name)
+            if actualQualifiedName != expectedQualifiedName:
+                self._elementStack.append((namespace, name))
+                raise XmlError(u"element name must be %s but is %s" % (uniExpectedQualifiedName, actualQualifiedName))
         self._writeElement(namespace, name, XmlWriter._CLOSE_AT_START)
 
     def element(self, qualifiedName, attributes={}):
