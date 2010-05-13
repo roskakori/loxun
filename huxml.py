@@ -12,84 +12,84 @@ The following example creates a very simple XHTML document.
 To make it simple, the output goes to a string, but you could also use
 a file that has been created using ``open()``.
  
->>> from StringIO import StringIO
->>> out = StringIO()
+    >>> from StringIO import StringIO
+    >>> out = StringIO()
 
 First create an `XmlWriter` to write the XML code to the specified output:
 
->>> xml = XmlWriter(out)
+    >>> xml = XmlWriter(out)
 
 Then add the document prolog:
 
->>> xml.prolog()
->>> print out.getvalue().rstrip("\\r\\n")
-<xml version="1.0" encoding="utf-8">
+    >>> xml.prolog()
+    >>> print out.getvalue().rstrip("\\r\\n")
+    <xml version="1.0" encoding="utf-8">
 
 Next add the ``<html>`` start element:
 
->>> xml.startElement("html")
+    >>> xml.startElement("html")
 
 Now comes the <body>. To pass attributes, specify them in a dictionary.
 So in order to add::
 
-  <body id="top">
+    <body id="top">
 
 use:
 
->>> xml.startElement("body", {u"id":u"top"})
+    >>> xml.startElement("body", {u"id":u"top"})
 
 Let' add a little text so there is something to look at:
 
->>> xml.text("Hello world!")
->>> xml.newline()
+    >>> xml.text("Hello world!")
+    >>> xml.newline()
 
 Wrap it up: close all elements and the document.
 
->>> xml.endElement()
->>> xml.endElement()
->>> xml.close()
+    >>> xml.endElement()
+    >>> xml.endElement()
+    >>> xml.close()
 
 And this is what we get:
 
->>> print out.getvalue().rstrip("\\r\\n")
-<xml version="1.0" encoding="utf-8">
-<html>
-  <body id="top">
-Hello world!
-  </body>
-</html>
+    >>> print out.getvalue().rstrip("\\r\\n")
+    <xml version="1.0" encoding="utf-8">
+    <html>
+      <body id="top">
+    Hello world!
+      </body>
+    </html>
 
 Now the same thing but with a name space. First create the prolog 
 and header like above: 
 
->>> out = StringIO()
->>> xml = XmlWriter(out)
->>> xml.prolog()
+    >>> out = StringIO()
+    >>> xml = XmlWriter(out)
+    >>> xml.prolog()
 
 Next add the namespace:
 
->>> xml.addNamespace("xhtml", "http://www.w3.org/1999/xhtml")
+    >>> xml.addNamespace("xhtml", "http://www.w3.org/1999/xhtml")
 
 Now elements can use qualified element names using a colon (:) to separate
 namespace and element name:
 
->>> xml.startElement("xhtml:html")
->>> xml.startElement("xhtml:body")
->>> xml.text("Hello world!")
->>> xml.newline()
->>> xml.endElement()
->>> xml.endElement()
->>> xml.close()
+    >>> xml.startElement("xhtml:html")
+    >>> xml.startElement("xhtml:body")
+    >>> xml.text("Hello world!")
+    >>> xml.newline()
+    >>> xml.endElement()
+    >>> xml.endElement()
+    >>> xml.close()
 
 As a result, element names are now prefixed with "xhtml:":
 
->>> print out.getvalue().rstrip("\\r\\n")
-<xml version="1.0" encoding="utf-8">
-<xhtml:html xlmns:xhtml="http://www.w3.org/1999/xhtml">
-  <xhtml:body>
-Hello world!
-  </xhtml:body>
-</xhtml:html>
+    >>> print out.getvalue().rstrip("\\r\\n")
+    <xml version="1.0" encoding="utf-8">
+    <xhtml:html xlmns:xhtml="http://www.w3.org/1999/xhtml">
+      <xhtml:body>
+    Hello world!
+      </xhtml:body>
+    </xhtml:html>
 
 """
 # Copyright (C) 2010 Thomas Aglassinger
@@ -150,19 +150,20 @@ def _splitPossiblyQualifiedName(name, value):
 
     A fully qualified name:
     
-    >>> _splitPossiblyQualifiedName(u"element name", u"xhtml:img")
-    (u'xhtml', u'img')
+        >>> _splitPossiblyQualifiedName(u"element name", u"xhtml:img")
+        (u'xhtml', u'img')
     
     A name in the default name space:
     
-    >>> _splitPossiblyQualifiedName(u"element name", u"img")
-    (None, u'img')
+        >>> _splitPossiblyQualifiedName(u"element name", u"img")
+        (None, u'img')
     
     Improper names result in an `XmlError`:
-    >>> _splitPossiblyQualifiedName(u"x", u"")
-    Traceback (most recent call last):
-    ...
-    XmlError: x must not be empty
+
+        >>> _splitPossiblyQualifiedName(u"x", u"")
+        Traceback (most recent call last):
+        ...
+        XmlError: x must not be empty
     """
     assert name
     _assertIsUnicode(u"name", name)
@@ -267,20 +268,20 @@ class XmlWriter(object):
         
         This is what the default prolog looks like:
         
-        >>> from StringIO import StringIO
-        >>> out = StringIO()
-        >>> xml = XmlWriter(out)
-        >>> xml.prolog()
-        >>> out.getvalue().rstrip("\\r\\n")
-        '<xml version="1.0" encoding="utf-8">'
+            >>> from StringIO import StringIO
+            >>> out = StringIO()
+            >>> xml = XmlWriter(out)
+            >>> xml.prolog()
+            >>> print out.getvalue().rstrip("\\r\\n")
+            <xml version="1.0" encoding="utf-8">
         
         You can change the version or encoding:
         
-        >>> out = StringIO()
-        >>> xml = XmlWriter(out, encoding=u"ascii")
-        >>> xml.prolog(u"1.1")
-        >>> out.getvalue().rstrip("\\r\\n")
-        '<xml version="1.1" encoding="ascii">'
+            >>> out = StringIO()
+            >>> xml = XmlWriter(out, encoding=u"ascii")
+            >>> xml.prolog(u"1.1")
+            >>> print out.getvalue().rstrip("\\r\\n")
+            <xml version="1.1" encoding="ascii">
         """
         self._write(u"<xml version=%s encoding=%s>" %
             (quoted(version), quoted(self._encoding))
@@ -359,16 +360,15 @@ class XmlWriter(object):
 
         Using a writer like
         
-          >>> from StringIO import StringIO
-          >>> out = StringIO()
-          >>> xml = XmlWriter(out)
+            >>> from StringIO import StringIO
+            >>> out = StringIO()
+            >>> xml = XmlWriter(out)
         
         you can write some text:
         
-          >>> xml.text("<this> & <that>")
-          >>> print out.getvalue().rstrip("\\r\\n")
-          &lt;this&gt; &amp; &lt;that&gt;
-
+            >>> xml.text("<this> & <that>")
+            >>> print out.getvalue().rstrip("\\r\\n")
+            &lt;this&gt; &amp; &lt;that&gt;
         """
         _validateNotNone(u"text", text)
         uniText = self._unicoded(text)
@@ -380,20 +380,19 @@ class XmlWriter(object):
 
         Using a writer like
         
-          >>> from StringIO import StringIO
-          >>> out = StringIO()
-          >>> xml = XmlWriter(out)
+            >>> from StringIO import StringIO
+            >>> out = StringIO()
+            >>> xml = XmlWriter(out)
         
         you can do evil things like this:
         
-          >>> xml.raw(">(^_^)<  not particular valid XML &&&")
-          >>> print out.getvalue().rstrip("\\r\\n")
-          >(^_^)<  not particular valid XML &&&
+            >>> xml.raw(">(^_^)<  not particular valid XML &&&")
+            >>> print out.getvalue().rstrip("\\r\\n")
+            >(^_^)<  not particular valid XML &&&
         """
         _validateNotNone(u"text", text)
         uniText = self._unicoded(text)
         self._write(uniText)
-
 
     def close(self):
         """
@@ -402,19 +401,19 @@ class XmlWriter(object):
 
         Using a writer like
         
-          >>> from StringIO import StringIO
-          >>> out = StringIO()
-          >>> xml = XmlWriter(out)
+            >>> from StringIO import StringIO
+            >>> out = StringIO()
+            >>> xml = XmlWriter(out)
 
         you can write an element without closing it:
         
-          >>> xml.startElement("some")
+            >>> xml.startElement("some")
           
         However, once you try to close the writer, you get:
-          >>> xml.close()
-          Traceback (most recent call last):
-            ...
-          XmlError: elements must end: </some>
+            >>> xml.close()
+            Traceback (most recent call last):
+                ...
+            XmlError: elements must end: </some>
         """
         remainingElements = ""
         while self._elementStack:
