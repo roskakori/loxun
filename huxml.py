@@ -27,7 +27,7 @@ Then add the document prolog:
 
 Next add the ``<html>`` start element:
 
->>> xml.startElement(u"html")
+>>> xml.startElement("html")
 
 Now comes the <body>. To pass attributes, specify them in a dictionary.
 So in order to add::
@@ -36,11 +36,11 @@ So in order to add::
 
 use:
 
->>> xml.startElement(u"body", {u"id":u"top"})
+>>> xml.startElement("body", {u"id":u"top"})
 
 Let' add a little text so there is something to look at:
 
->>> xml.text(u"Hello world!")
+>>> xml.text("Hello world!")
 >>> xml.newline()
 
 Wrap it up: close all elements and the document.
@@ -68,14 +68,14 @@ and header like above:
 
 Next add the namespace:
 
->>> xml.addNamespace(u"xhtml", u"http://www.w3.org/1999/xhtml")
+>>> xml.addNamespace("xhtml", "http://www.w3.org/1999/xhtml")
 
 Now elements can use qualified element names using a colon (:) to separate
 namespace and element name:
 
->>> xml.startElement(u"xhtml:html")
->>> xml.startElement(u"xhtml:body")
->>> xml.text(u"Hello world!")
+>>> xml.startElement("xhtml:html")
+>>> xml.startElement("xhtml:body")
+>>> xml.text("Hello world!")
 >>> xml.newline()
 >>> xml.endElement()
 >>> xml.endElement()
@@ -134,6 +134,19 @@ def _validateNotEmpty(name, value):
     assert name
     if not value:
         raise XmlError(u"%s must not be empty" % name)
+
+def _validateNotNone(name, value):
+    """
+    Validates that `value` is not `None` and raises `XmlError` in case it is.
+    """
+    assert name
+    if value is None:
+        raise XmlError(u"%s must not be %r" % (name, None))
+
+
+def _assertIsUnicode(name, value):
+    assert (value is None) or isinstance(value, unicode), \
+        u"value for %r must be of type unicode but is: %r" % (name, value)
         
 def _splitPossiblyQualifiedName(name, value):
     """
@@ -150,23 +163,26 @@ def _splitPossiblyQualifiedName(name, value):
     (None, u'img')
     
     Improper names result in an `XmlError`:
-    >>> _splitPossiblyQualifiedName("x", "")
+    >>> _splitPossiblyQualifiedName(u"x", u"")
     Traceback (most recent call last):
     ...
     XmlError: x must not be empty
     """
     assert name
+    _assertIsUnicode(u"name", name)
+    _assertIsUnicode(u"value", value)
+
     colonIndex = value.find(u":")
     if colonIndex == -1:
         _validateNotEmpty(name, value)
         result = (None, value)
     else:
         namespacePart = value[:colonIndex]
-        _validateNotEmpty("namespace part of %s", namespacePart)
+        _validateNotEmpty(u"namespace part of %s", namespacePart)
         namePart = value[colonIndex+1:]
-        _validateNotEmpty("name part of %s", namePart)
+        _validateNotEmpty(u"name part of %s", namePart)
         result = (namespacePart, namePart)
-    # TODO: validate that all part are NCNAMEs.
+    # TODO: validate that all parts are NCNAMEs.
     return result
 
 class XmlWriter(object):
@@ -194,6 +210,19 @@ class XmlWriter(object):
         _requireUnicode(u"text", text)
         return text.encode(self._encoding, self._errors)
 
+    def _unicoded(self, text):
+        """
+        Same value as `text` but converted to unicode in case `text` is a string.
+        `None` remains `None`.
+        """
+        if text is None:
+            result = None
+        elif isinstance(text, unicode):
+            result = text
+        else:
+            result = unicode(text, "ascii")
+        return result
+
     def _elementName(self, name, namespace):
         assert name
         if namespace:
@@ -212,22 +241,21 @@ class XmlWriter(object):
 
     def addNamespace(self, name, uri):
         assert name
-        _requireUnicode(u"name", name)
         assert uri
-        _requireUnicode(u"uri", uri)
-        assert not self._elementStack, u"currently namespace must be added before first element"
+        if self._elementStack:
+            raise NotImplemented(u"currently namespace must be added before first element") 
 
-        if name in self._namespaces:
-            raise ValueError(u"namespace %r must added only once but already is %r" % (name, uri))
-        self._namespacesToAdd.append((name, uri))
+        uniName = self._unicoded(name)
+        uniUri = self._unicoded(uri)
+        if uniName in self._namespaces:
+            raise ValueError(u"namespace %r must added only once but already is %r" % (uniName, uniUri))
+        self._namespacesToAdd.append((uniName, uniUri))
 
     def prolog(self, version=u"1.0"):
         """
         Write the XML prolog.
         
         The encoding depends on the encoding specified when initializing the writer.
-        
-        Example:
         
         This is what the default prolog looks like:
         
@@ -252,14 +280,13 @@ class XmlWriter(object):
         self.newline()
 
     def _writeElement(self, namespace, name, close, attributes={}):
+        _assertIsUnicode("namespace", namespace)
         assert name
+        _assertIsUnicode("name", name)
         assert close
         assert close in (XmlWriter._CLOSE_NONE, XmlWriter._CLOSE_AT_START, XmlWriter._CLOSE_AT_END)
         assert attributes is not None
-        if namespace:
-            _requireUnicode(u"namespace", namespace)
-        _requireUnicode(u"name", name)
-
+        
         # Process new namespaces to add.
         actualAttributes = attributes.copy()
         while self._namespacesToAdd:
@@ -294,7 +321,8 @@ class XmlWriter(object):
             self.newline()
 
     def startElement(self, qualifiedName, attributes={}):
-        namespace, name = _splitPossiblyQualifiedName("element name", qualifiedName)
+        uniQualifiedName = self._unicoded(qualifiedName)
+        namespace, name = _splitPossiblyQualifiedName(u"element name", uniQualifiedName)
         self._writeElement(namespace, name, XmlWriter._CLOSE_NONE, attributes)
         self._elementStack.append((namespace, name))
 
@@ -306,13 +334,51 @@ class XmlWriter(object):
         self._writeElement(namespace, name, XmlWriter._CLOSE_AT_START)
 
     def element(self, qualifiedName, attributes={}):
-        namespace, name = _splitPossiblyQualifiedName("element name", qualifiedName)
+        uniQualifiedName = self._unicoded(qualifiedName)
+        namespace, name = _splitPossiblyQualifiedName(u"element name", uniQualifiedName)
         self._writeElement(namespace, name, XmlWriter._CLOSE_AT_END, attributes)
 
     def text(self, text):
-        assert text is not None
-        _requireUnicode(u"text", text)
-        self._write(xml.sax.saxutils.escape(text))
+        """
+        Write `text` using escape sequences if needed.
+
+        Using a writer like
+        
+          >>> from StringIO import StringIO
+          >>> out = StringIO()
+          >>> xml = XmlWriter(out)
+        
+        you can write some text:
+        
+          >>> xml.text("<this> & <that>")
+          >>> print out.getvalue().rstrip("\\r\\n")
+          &lt;this&gt; &amp; &lt;that&gt;
+
+        """
+        _validateNotNone(u"text", text)
+        uniText = self._unicoded(text)
+        self._write(xml.sax.saxutils.escape(uniText))
+
+    def raw(self, text):
+        """
+        Write raw `text` without escaping or validating anything.
+
+        Using a writer like
+        
+          >>> from StringIO import StringIO
+          >>> out = StringIO()
+          >>> xml = XmlWriter(out)
+        
+        you can do evil things like this:
+        
+          >>> xml.raw(">(^_^)<  not particular valid XML &&&")
+          >>> print out.getvalue().rstrip("\\r\\n")
+          >(^_^)<  not particular valid XML &&&
+        """
+        _validateNotNone(u"text", text)
+        uniText = self._unicoded(text)
+        self._write(uniText)
+
 
     def close(self):
         remainingElements = ""
