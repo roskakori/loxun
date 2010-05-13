@@ -119,12 +119,8 @@ class XmlError(Exception):
     """
     pass
 
-def _requireUnicode(name, value):
-    if not isinstance(value, unicode):
-        raise XmlError(u"value for %r must be of type unicode but is: %r" % (name, value))
-
 def quoted(value):
-    _requireUnicode(u"value", value)
+    _assertIsUnicode(u"value", value)
     return xml.sax.saxutils.quoteattr(value)
 
 def _validateNotEmpty(name, value):
@@ -193,21 +189,22 @@ class XmlWriter(object):
     def __init__(self, output, pretty=True, encoding=u"utf-8", errors=u"strict"):
         assert output is not None
         assert encoding
-        _requireUnicode(u"encoding", encoding)
         assert errors
         self._output = output
         self._pretty = pretty
         self._indent = u"  "
         self._newline = unicode(os.linesep, "ascii")
-        self._encoding = encoding
-        self._errors = errors
+        self._encoding = self._unicoded(encoding)
+        self._errors = self._unicoded(errors)
         self._namespaces = {}
         self._elementStack = collections.deque()
         self._namespacesToAdd = collections.deque()
+        self._isOpen = True
+        self._contentHasBeenWritten = False
 
     def _encoded(self, text):
         assert text is not None
-        _requireUnicode(u"text", text)
+        _assertIsUnicode(u"text", text)
         return text.encode(self._encoding, self._errors)
 
     def _unicoded(self, text):
@@ -231,10 +228,21 @@ class XmlWriter(object):
             result = name
         return result
 
+    def _validateIsOpen(self):
+        if not self._isOpen:
+            raise XmlError("operation must be performed before writer is closed")
+
+    def _validateNamespaceItem(self, itemName, namespace, qualifiedName):
+        if namespace:
+            if namespace not in self._namespaces:
+                raise XmlError(u"namespace '%s' for %s '%s' must be added before use" % (namespace, itemName, qualifiedName))
+
     def _write(self, text):
         assert text is not None
-        _requireUnicode(u"text", text)
+        _assertIsUnicode(u"text", text)
         self._output.write(self._encoded(text))
+        if text:
+            self._contentHasBeenWritten = True
 
     def newline(self):
         self._write(self._newline)
@@ -286,9 +294,10 @@ class XmlWriter(object):
         assert close
         assert close in (XmlWriter._CLOSE_NONE, XmlWriter._CLOSE_AT_START, XmlWriter._CLOSE_AT_END)
         assert attributes is not None
-        
+
+        actualAttributes = {}
+
         # Process new namespaces to add.
-        actualAttributes = attributes.copy()
         while self._namespacesToAdd:
             namespaceName, uri = self._namespacesToAdd.pop()
             if namespaceName:
@@ -296,9 +305,15 @@ class XmlWriter(object):
             else:
                 actualAttributes[u"xlmns"] = uri
             self._namespaces[namespaceName] = uri
-        if namespace:
-            if namespace not in self._namespaces:
-                raise ValueError(u"namespace %r must be added before use" % namespace)
+
+        # Convert attributes to unicode.
+        for qualifiedAttributeName, attributeValue in attributes.items():
+            uniQualifiedAttributeName = self._unicoded(qualifiedAttributeName)
+            attributeNamespace, attributeName = _splitPossiblyQualifiedName(u"attribute name", uniQualifiedAttributeName)
+            self._validateNamespaceItem(u"attribute", attributeNamespace, attributeName)
+            actualAttributes[uniQualifiedAttributeName] = self._unicoded(attributeValue)
+
+        self._validateNamespaceItem(u"element", namespace, name)
         if namespace:
             element = u"%s:%s" % (namespace, name)
         else:
@@ -310,9 +325,9 @@ class XmlWriter(object):
             self._write(u"/")
         self._write(element)
         for attributeName in sorted(actualAttributes.keys()):
-            _requireUnicode(u"attribute name", attributeName)
+            _assertIsUnicode(u"attribute name", attributeName)
             value = actualAttributes[attributeName]
-            _requireUnicode(u"value of attribute %r" % attributeName, value)
+            _assertIsUnicode(u"value of attribute %r" % attributeName, value)
             self._write(u" %s=%s" % (attributeName, quoted(value)))
         if close == XmlWriter._CLOSE_AT_END:
             self._write(u"/")
@@ -381,11 +396,31 @@ class XmlWriter(object):
 
 
     def close(self):
+        """
+        Close the writer, validate that all started elements have ended and
+        prevent further output.
+
+        Using a writer like
+        
+          >>> from StringIO import StringIO
+          >>> out = StringIO()
+          >>> xml = XmlWriter(out)
+
+        you can write an element without closing it:
+        
+          >>> xml.startElement("some")
+          
+        However, once you try to close the writer, you get:
+          >>> xml.close()
+          Traceback (most recent call last):
+            ...
+          XmlError: elements must end: </some>
+        """
         remainingElements = ""
         while self._elementStack:
             if remainingElements:
                 remainingElements += ", "
-            name, namespace = self._elementStack.pop()
+            namespace, name = self._elementStack.pop()
             remainingElements += u"</%s>" % self._elementName(name, namespace)
         if remainingElements:
             raise XmlError(u"elements must end: %s" % remainingElements)
