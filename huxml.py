@@ -70,10 +70,11 @@ Next add the namespace:
 
 >>> xml.addNamespace(u"xhtml", u"http://www.w3.org/1999/xhtml")
 
-Now elements can use the optional `namespace` parameter:
+Now elements can use qualified element names using a colon (:) to separate
+namespace and element name:
 
->>> xml.startElement(u"html", namespace=u"xhtml")
->>> xml.startElement(u"body", namespace=u"xhtml")
+>>> xml.startElement(u"xhtml:html")
+>>> xml.startElement(u"xhtml:body")
 >>> xml.text(u"Hello world!")
 >>> xml.newline()
 >>> xml.endElement()
@@ -125,6 +126,48 @@ def _requireUnicode(name, value):
 def quoted(value):
     _requireUnicode(u"value", value)
     return xml.sax.saxutils.quoteattr(value)
+
+def _validateNotEmpty(name, value):
+    """
+    Validates that `value` is not empty or `None` and raises `XmlError` in case it is.
+    """
+    assert name
+    if not value:
+        raise XmlError(u"%s must not be empty" % name)
+        
+def _splitPossiblyQualifiedName(name, value):
+    """
+    A pair `(namespace, name)` derived from `qualifiedName`.
+
+    A fully qualified name:
+    
+    >>> _splitPossiblyQualifiedName(u"element name", u"xhtml:img")
+    (u'xhtml', u'img')
+    
+    A name in the default name space:
+    
+    >>> _splitPossiblyQualifiedName(u"element name", u"img")
+    (None, u'img')
+    
+    Improper names result in an `XmlError`:
+    >>> _splitPossiblyQualifiedName("x", "")
+    Traceback (most recent call last):
+    ...
+    XmlError: x must not be empty
+    """
+    assert name
+    colonIndex = value.find(u":")
+    if colonIndex == -1:
+        _validateNotEmpty(name, value)
+        result = (None, value)
+    else:
+        namespacePart = value[:colonIndex]
+        _validateNotEmpty("namespace part of %s", namespacePart)
+        namePart = value[colonIndex+1:]
+        _validateNotEmpty("name part of %s", namePart)
+        result = (namespacePart, namePart)
+    # TODO: validate that all part are NCNAMEs.
+    return result
 
 class XmlWriter(object):
     _CLOSE_NONE = u"none"
@@ -184,17 +227,16 @@ class XmlWriter(object):
         )
         self.newline()
 
-    def _writeElement(self, name, close, attributes={}, namespace=None):
+    def _writeElement(self, namespace, name, close, attributes={}):
         assert name
-        _requireUnicode(u"name", name)
         assert close
         assert close in (XmlWriter._CLOSE_NONE, XmlWriter._CLOSE_AT_START, XmlWriter._CLOSE_AT_END)
         assert attributes is not None
         if namespace:
             _requireUnicode(u"namespace", namespace)
+        _requireUnicode(u"name", name)
 
         # Process new namespaces to add.
-        # FIXME: Do not modify attributes passed, use a copy instead.
         actualAttributes = attributes.copy()
         while self._namespacesToAdd:
             namespaceName, uri = self._namespacesToAdd.pop()
@@ -227,19 +269,21 @@ class XmlWriter(object):
         if self._pretty:
             self.newline()
 
-    def startElement(self, name, attributes={}, namespace=None):
-        self._writeElement(name, XmlWriter._CLOSE_NONE, attributes, namespace)
-        self._elementStack.append((name, namespace))
+    def startElement(self, qualifiedName, attributes={}):
+        namespace, name = _splitPossiblyQualifiedName("element name", qualifiedName)
+        self._writeElement(namespace, name, XmlWriter._CLOSE_NONE, attributes)
+        self._elementStack.append((namespace, name))
 
     def endElement(self):
         try:
-            (name, namespace) = self._elementStack.pop()
+            (namespace, name) = self._elementStack.pop()
         except IndexError:
             raise XmlError(u"element stack must not be empty")
-        self._writeElement(name, XmlWriter._CLOSE_AT_START, namespace=namespace)
+        self._writeElement(namespace, name, XmlWriter._CLOSE_AT_START)
 
-    def element(self, name, attributes={}, namespace=None):
-        self._writeElement(name, XmlWriter._CLOSE_AT_END, attributes, namespace)
+    def element(self, qualifiedName, attributes={}):
+        namespace, name = _splitPossiblyQualifiedName("element name", qualifiedName)
+        self._writeElement(namespace, name, XmlWriter._CLOSE_AT_END, attributes)
 
     def text(self, text):
         assert text is not None
