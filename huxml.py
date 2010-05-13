@@ -19,9 +19,9 @@ First create an `XmlWriter` to write the XML code to the specified output:
 
 >>> xml = XmlWriter(out)
 
-Then add the document header:
+Then add the document prolog:
 
->>> xml.document()
+>>> xml.prolog()
 >>> print out.getvalue().rstrip("\\r\\n")
 <xml version="1.0" encoding="utf-8">
 
@@ -59,12 +59,12 @@ Hello world!
   </body>
 </html>
 
-Now the same thing but with a name space. First create the document 
+Now the same thing but with a name space. First create the prolog 
 and header like above: 
 
 >>> out = StringIO()
 >>> xml = XmlWriter(out)
->>> xml.document()
+>>> xml.prolog()
 
 Next add the namespace:
 
@@ -221,9 +221,33 @@ class XmlWriter(object):
             raise ValueError(u"namespace %r must added only once but already is %r" % (name, uri))
         self._namespacesToAdd.append((name, uri))
 
-    def document(self):
+    def prolog(self, version=u"1.0"):
+        """
+        Write the XML prolog.
+        
+        The encoding depends on the encoding specified when initializing the writer.
+        
+        Example:
+        
+        This is what the default prolog looks like:
+        
+        >>> from StringIO import StringIO
+        >>> out = StringIO()
+        >>> xml = XmlWriter(out)
+        >>> xml.prolog()
+        >>> out.getvalue().rstrip("\\r\\n")
+        '<xml version="1.0" encoding="utf-8">'
+        
+        You can change the version or encoding:
+        
+        >>> out = StringIO()
+        >>> xml = XmlWriter(out, encoding=u"ascii")
+        >>> xml.prolog(u"1.1")
+        >>> out.getvalue().rstrip("\\r\\n")
+        '<xml version="1.1" encoding="ascii">'
+        """
         self._write(u"<xml version=%s encoding=%s>" %
-            (quoted(u"1.0"), quoted(self._encoding))
+            (quoted(version), quoted(self._encoding))
         )
         self.newline()
 
