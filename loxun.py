@@ -2,9 +2,9 @@
 loxun
 =====
 
-loxun is a Python module to write **l**arge **o**utput in **X**ML using **u**nicode
-and **n**amespaces. Of course you can also use it for small XML output with
-plain 8 bit strings and no namespaces.
+loxun is a Python module to write large output in XML using Unicode and
+namespaces. Of course you can also use it for small XML output with plain 8
+bit strings and no namespaces.
 
 Loxun's features are:
 
