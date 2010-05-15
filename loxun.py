@@ -1,8 +1,34 @@
 """
-huxml
+loxun
 ====
 
-Huxml is a Python module to create huge XML files with a low memory footprint.
+loxun is a Python module to write *l*arge *output* in *X*ML using *u*nicode
+and *n*amespaces. Of course you can also use it for small XML output with
+plain 8 bit strings and no namespaces.
+
+Loxun's features are:
+
+* *low memory foot print*: the document is created on the fly by writing to an
+  output stream, no need to keep all of it in memory
+
+* *easy to use namespaces*: simply add a namespace and refer to it using the
+  standard ``namespace:element`` syntax.
+
+* *mix unicode and string*: pass both unicode or plain 8 bit strings to any of
+  the methods. Internally loxun converts them to unicode, so once a parameter
+  got accepted by the API you can rely on it not resulting in any messy
+  ``UnicodeError``trouble.
+
+* *automatic escaping*: no need to manually handle special characters such as
+  ``<`` or ``&`` when writing text and attribute values. 
+
+* *robustness*: while you write the document, sanity checks are performed on
+  everything you do. Many silly mistakes immediately result in an
+  ``XmlError``, for example missing end references to undeclared namespaces.
+
+* *open source*: distributed under the GNU Lesser General Public License v3 or
+   later.
+
 
 Writing a simple document
 -----------------------

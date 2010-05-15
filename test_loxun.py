@@ -1,5 +1,5 @@
 """
-Tests for huxml.
+Tests for loxun.
 """
 # Copyright (C) 2010 Thomas Aglassinger
 #
@@ -18,10 +18,10 @@ Tests for huxml.
 import unittest
 import doctest
 
-import huxml
+import loxun
 
 if __name__ == "__main__":
     suite = unittest.TestSuite()
-    suite.addTest(doctest.DocTestSuite(huxml))
+    suite.addTest(doctest.DocTestSuite(loxun))
     runner = unittest.TextTestRunner()
     runner.run(suite)
