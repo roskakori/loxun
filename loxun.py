@@ -1,15 +1,12 @@
 """
-loxun
-=====
-
 loxun is a Python module to write large output in XML using Unicode and
 namespaces. Of course you can also use it for small XML output with plain 8
 bit strings and no namespaces.
 
-Loxun's features are:
+loxun's features are:
 
 * **low memory foot print**: the document is created on the fly by writing to
-  an output stream, no need to keep all of it in memory
+  an output stream, no need to keep all of it in memory.
 
 * **easy to use namespaces**: simply add a namespace and refer to it using the
   standard ``namespace:element`` syntax.
@@ -32,7 +29,7 @@ Loxun's features are:
 
 
 Writing a simple document
--------------------------
+=========================
 
 The following example creates a very simple XHTML document.
 
@@ -63,7 +60,7 @@ So in order to add::
 
 use:
 
-    >>> xml.startElement("body", {u"id":u"top"})
+    >>> xml.startElement("body", {"id":"top"})
 
 Let' add a little text so there is something to look at:
 
@@ -119,10 +116,15 @@ As a result, element names are now prefixed with "xhtml:":
     </xhtml:html>
 
 Version history
----------------
+===============
+
+Version 0.2, 15-May-2010
+------------------------
+
+* ...
 
 Version 0.1, 15-May-2010
-~~~~~~~~~~~~~~~~~~~~~~~~
+------------------------
 
 * Initial release.
 """
@@ -140,11 +142,22 @@ Version 0.1, 15-May-2010
 #
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Developer cheat sheet
+#
+# Buid release:
+# > python setup.py sdist --formats=zip
+#
+# Upload release to PyPI:
+# > python setup.py sdist --formats=zip upload
+#
+# Tag a release in the repository:
+# > svn copy -m "Added tag for version 0.x." file:///Users/agi/Repositories/huxml/trunk file:///Users/agi/Repositories/huxml/tags/0.x
 import collections
 import os
 import xml.sax.saxutils
 
-VERSION = "0.1"
+VERSION = "0.2"
 REPOSITORY_ID, VERSION_DATE = "$Id$".split()[2:4]
 
 class XmlError(Exception):
