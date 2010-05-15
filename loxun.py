@@ -1,43 +1,44 @@
 """
 loxun
-====
+=====
 
-loxun is a Python module to write *l*arge *output* in *X*ML using *u*nicode
-and *n*amespaces. Of course you can also use it for small XML output with
+loxun is a Python module to write **l**arge **o**utput in **X**ML using **u**nicode
+and **n**amespaces. Of course you can also use it for small XML output with
 plain 8 bit strings and no namespaces.
 
 Loxun's features are:
 
-* *low memory foot print*: the document is created on the fly by writing to an
-  output stream, no need to keep all of it in memory
+* **low memory foot print**: the document is created on the fly by writing to
+  an output stream, no need to keep all of it in memory
 
-* *easy to use namespaces*: simply add a namespace and refer to it using the
+* **easy to use namespaces**: simply add a namespace and refer to it using the
   standard ``namespace:element`` syntax.
 
-* *mix unicode and string*: pass both unicode or plain 8 bit strings to any of
-  the methods. Internally loxun converts them to unicode, so once a parameter
-  got accepted by the API you can rely on it not resulting in any messy
-  ``UnicodeError``trouble.
+* **mix unicode and string**: pass both unicode or plain 8 bit strings to any
+  of the methods. Internally loxun converts them to unicode, so once a
+  parameter got accepted by the API you can rely on it not resulting in any
+  messy ``UnicodeError`` trouble.
 
-* *automatic escaping*: no need to manually handle special characters such as
-  ``<`` or ``&`` when writing text and attribute values. 
+* **automatic escaping**: no need to manually handle special characters such
+  as ``<`` or ``&`` when writing text and attribute values.
 
-* *robustness*: while you write the document, sanity checks are performed on
+* **robustness**: while you write the document, sanity checks are performed on
   everything you do. Many silly mistakes immediately result in an
-  ``XmlError``, for example missing end references to undeclared namespaces.
+  ``XmlError``, for example missing end elements or references to undeclared
+  namespaces.
 
-* *open source*: distributed under the GNU Lesser General Public License v3 or
-   later.
+* **open source**: distributed under the GNU Lesser General Public License 3
+  or later.
 
 
 Writing a simple document
------------------------
+-------------------------
 
 The following example creates a very simple XHTML document.
 
 To make it simple, the output goes to a string, but you could also use
 a file that has been created using ``open()``.
- 
+
     >>> from StringIO import StringIO
     >>> out = StringIO()
 
@@ -85,8 +86,8 @@ And this is what we get:
       </body>
     </html>
 
-Now the same thing but with a namespace. First create the prolog 
-and header like above: 
+Now the same thing but with a namespace. First create the prolog
+and header like above:
 
     >>> out = StringIO()
     >>> xml = XmlWriter(out)
@@ -117,6 +118,13 @@ As a result, element names are now prefixed with "xhtml:":
       </xhtml:body>
     </xhtml:html>
 
+Version history
+---------------
+
+Version 0.1, 15-May-2010
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+* Initial release.
 """
 # Copyright (C) 2010 Thomas Aglassinger
 #
@@ -169,21 +177,21 @@ def _validateNotNone(name, value):
 def _assertIsUnicode(name, value):
     assert (value is None) or isinstance(value, unicode), \
         u"value for %r must be of type unicode but is: %r" % (name, value)
-        
+
 def _splitPossiblyQualifiedName(name, value):
     """
     A pair `(namespace, name)` derived from `qualifiedName`.
 
     A fully qualified name:
-    
+
         >>> _splitPossiblyQualifiedName(u"element name", u"xhtml:img")
         (u'xhtml', u'img')
-    
+
     A name in the default namespace:
-    
+
         >>> _splitPossiblyQualifiedName(u"element name", u"img")
         (None, u'img')
-    
+
     Improper names result in an `XmlError`:
 
         >>> _splitPossiblyQualifiedName(u"x", u"")
@@ -217,7 +225,7 @@ def _joinPossiblyQualifiedName(namespace, name):
     else:
         result = name
     return result
-    
+
 class XmlWriter(object):
     _CLOSE_NONE = u"none"
     _CLOSE_AT_START = u"start"
@@ -288,7 +296,7 @@ class XmlWriter(object):
         assert name
         assert uri
         if self._elementStack:
-            raise NotImplemented(u"currently namespace must be added before first element") 
+            raise NotImplemented(u"currently namespace must be added before first element")
 
         uniName = self._unicoded(name)
         uniUri = self._unicoded(uri)
@@ -299,20 +307,20 @@ class XmlWriter(object):
     def prolog(self, version=u"1.0"):
         """
         Write the XML prolog.
-        
+
         The encoding depends on the encoding specified when initializing the writer.
-        
+
         This is what the default prolog looks like:
-        
+
             >>> from StringIO import StringIO
             >>> out = StringIO()
             >>> xml = XmlWriter(out)
             >>> xml.prolog()
             >>> print out.getvalue().rstrip("\\r\\n")
             <xml version="1.0" encoding="utf-8">
-        
+
         You can change the version or encoding:
-        
+
             >>> out = StringIO()
             >>> xml = XmlWriter(out, encoding=u"ascii")
             >>> xml.prolog(u"1.1")
@@ -376,13 +384,13 @@ class XmlWriter(object):
         """
         Start element with name `qualifiedName`, optionally using a namespace
         prefix separated with a colon (:) and `attributes`.
-        
+
         Example names are "img" and "xhtml:img" (assuming the namespace prefix
         "xtml" has been added before using `addNamespace()`).
-        
+
         Attributes are a dictionary containing the attribute name and value, for
         example:
-        
+
         {
             "src": "../some.png",
             "xhtml:alt": "some image"
@@ -399,14 +407,14 @@ class XmlWriter(object):
         optionally checking that the name matches `expectedQualifiedName`.
 
         As example, consider the following writer with a namespace:
-        
+
             >>> from StringIO import StringIO
             >>> out = StringIO()
             >>> xml = XmlWriter(out)
             >>> xml.addNamespace("xhtml", "http://www.w3.org/1999/xhtml")
-        
+
             Now start a couple of elements:
-            
+
             >>> xml.startElement("html")
             >>> xml.startElement("head")
             >>> xml.startElement("xhtml:body")
@@ -419,11 +427,11 @@ class XmlWriter(object):
             XmlError: element name must be xhtml:doby but is xhtml:body
 
             Try again properly:
-    
+
             >>> xml.endElement("xhtml:body")
-            
+
             End an element without an expected name:
-            
+
             >>> xml.endElement()
 
             Try to end another mistyped element, this time without namespace:
@@ -456,13 +464,13 @@ class XmlWriter(object):
         Write `text` using escape sequences if needed.
 
         Using a writer like
-        
+
             >>> from StringIO import StringIO
             >>> out = StringIO()
             >>> xml = XmlWriter(out)
-        
+
         you can write some text:
-        
+
             >>> xml.text("<this> & <that>")
             >>> print out.getvalue().rstrip("\\r\\n")
             &lt;this&gt; &amp; &lt;that&gt;
@@ -476,13 +484,13 @@ class XmlWriter(object):
         Write raw `text` without escaping or validating anything.
 
         Using a writer like
-        
+
             >>> from StringIO import StringIO
             >>> out = StringIO()
             >>> xml = XmlWriter(out)
-        
+
         you can do evil things like this:
-        
+
             >>> xml.raw(">(^_^)<  not particular valid XML &&&")
             >>> print out.getvalue().rstrip("\\r\\n")
             >(^_^)<  not particular valid XML &&&
@@ -497,15 +505,15 @@ class XmlWriter(object):
         prevent further output.
 
         Using a writer like
-        
+
             >>> from StringIO import StringIO
             >>> out = StringIO()
             >>> xml = XmlWriter(out)
 
         you can write an element without closing it:
-        
+
             >>> xml.startElement("some")
-          
+
         However, once you try to close the writer, you get:
             >>> xml.close()
             Traceback (most recent call last):
