@@ -59,7 +59,7 @@ And this is what we get:
       </body>
     </html>
 
-Now the same thing but with a name space. First create the prolog 
+Now the same thing but with a namespace. First create the prolog 
 and header like above: 
 
     >>> out = StringIO()
@@ -153,7 +153,7 @@ def _splitPossiblyQualifiedName(name, value):
         >>> _splitPossiblyQualifiedName(u"element name", u"xhtml:img")
         (u'xhtml', u'img')
     
-    A name in the default name space:
+    A name in the default namespace:
     
         >>> _splitPossiblyQualifiedName(u"element name", u"img")
         (None, u'img')
@@ -372,7 +372,7 @@ class XmlWriter(object):
         End element that has been started before using `startElement`,
         optionally checking that the name matches `expectedQualifiedName`.
 
-        As example, consider the following writer with a name space:
+        As example, consider the following writer with a namespace:
         
             >>> from StringIO import StringIO
             >>> out = StringIO()
