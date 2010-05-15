@@ -44,7 +44,7 @@ setup(
         # TODO: Test with Python 2.4. Who knows, it might actually work.
         "Programming Language :: Python :: 2.5",
         "Programming Language :: Python :: 2.6",
-        "Topic :: Internet :: WWW/HTTP :: Dynamic Content"
+        "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
         "Topic :: Software Development :: Libraries",
         "Topic :: Text Processing :: Markup :: XML",
     ],
