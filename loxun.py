@@ -226,8 +226,8 @@ import os
 import xml.sax.saxutils
 from StringIO import StringIO
 
-VERSION = "0.3"
-REPOSITORY_ID, VERSION_DATE = "$Id$".split()[2:4]
+__version__ = "0.3"
+VERSION_REV, VERSION_DATE = "$Id$".split()[2:4]
 
 class XmlError(Exception):
     """

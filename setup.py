@@ -25,7 +25,7 @@ import loxun
 
 setup(
     name="loxun",
-    version=loxun.VERSION,
+    version=loxun.__version__,
     py_modules=["loxun"],
     description="large output in XML using unicode and namespaces",
     keywords="xml output stream large big huge namespace unicode memory footprint",
