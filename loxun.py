@@ -50,7 +50,7 @@ Now write the content:
 Finally take a look at the results:
 
     >>> print out.getvalue().rstrip("\\r\\n")
-    <xml version="1.0" encoding="utf-8">
+    <?xml version="1.0" encoding="utf-8"?>
     <xhtml:html xlmns:xhtml="http://www.w3.org/1999/xhtml">
       <xhtml:body>
         Hello world!
@@ -78,7 +78,7 @@ Then add the document prolog:
 
     >>> xml.prolog()
     >>> print out.getvalue().rstrip("\\r\\n")
-    <xml version="1.0" encoding="utf-8">
+    <?xml version="1.0" encoding="utf-8"?>
 
 Next add the ``<html>`` start element:
 
@@ -106,7 +106,7 @@ Wrap it up: close all elements and the document.
 And this is what we get:
 
     >>> print out.getvalue().rstrip("\\r\\n")
-    <xml version="1.0" encoding="utf-8">
+    <?xml version="1.0" encoding="utf-8"?>
     <html>
       <body id="top">
         Hello world!
@@ -137,7 +137,7 @@ namespace and element name:
 As a result, element names are now prefixed with "xhtml:":
 
     >>> print out.getvalue().rstrip("\\r\\n")
-    <xml version="1.0" encoding="utf-8">
+    <?xml version="1.0" encoding="utf-8"?>
     <xhtml:html xlmns:xhtml="http://www.w3.org/1999/xhtml">
       <xhtml:body>
         Hello world!
@@ -147,10 +147,15 @@ As a result, element names are now prefixed with "xhtml:":
 Version history
 ===============
 
-Version 0.2, 15-May-2010
+Version 0.2, 16-May-2010
 ------------------------
 
-* ...
+* Added ``comment()``, ``cdata()`` and ``processingInstruction()`` to write
+  these specific XML constructs.
+* Added indentation and automatic newline to text if pretty printing is
+  enabled.
+* Removed newline from prolog in case pretty printing is disabled.
+* Fixed missing "?" in prolog.
 
 Version 0.1, 15-May-2010
 ------------------------
@@ -274,6 +279,10 @@ class XmlWriter(object):
     _CDATA_START = u"<![CDATA["
     _CDATA_END = u"]]>"
 
+    # Marks to start/end processing instrution.
+    _PROCESSING_START = u"<?"
+    _PROCESSING_END = u"?>"
+
     # Possible value for _writeElement()'s ``close`` parameter.
     _CLOSE_NONE = u"none"
     _CLOSE_AT_START = u"start"
@@ -396,7 +405,7 @@ class XmlWriter(object):
             >>> xml = XmlWriter(out)
             >>> xml.prolog()
             >>> print out.getvalue().rstrip("\\r\\n")
-            <xml version="1.0" encoding="utf-8">
+            <?xml version="1.0" encoding="utf-8"?>
 
         You can change the version or encoding:
 
@@ -404,12 +413,11 @@ class XmlWriter(object):
             >>> xml = XmlWriter(out, encoding=u"ascii")
             >>> xml.prolog(u"1.1")
             >>> print out.getvalue().rstrip("\\r\\n")
-            <xml version="1.1" encoding="ascii">
+            <?xml version="1.1" encoding="ascii"?>
         """
-        self._write(u"<xml version=%s encoding=%s>" %
+        self.processingInstruction(u"xml", "version=%s encoding=%s" %
             (_quoted(version), _quoted(self._encoding))
         )
-        self.newline()
 
     def _writeElement(self, namespace, name, close, attributes={}):
         _assertIsUnicode("namespace", namespace)
@@ -642,7 +650,7 @@ class XmlWriter(object):
             >>> out = StringIO()
             >>> xml = XmlWriter(out)
             
-        Now add the comment
+        Now add the CDATA section:
 
             >>> xml.cdata("some data\\nlines\\n<tag>&&&")
 
@@ -653,16 +661,50 @@ class XmlWriter(object):
             lines
             <tag>&&&]]>
         """
-        _validateNotNone(u"text", text)
-        uniText = self._unicoded(text)
-        if XmlWriter._CDATA_END in uniText:
-            raise XmlError("text for cdata must not contain \"%s\"" % XmlWriter._CDATA_END)
-        self._writePrettyIndent()
-        self._write(XmlWriter._CDATA_START)
-        self._write(uniText)
-        self._write(XmlWriter._CDATA_END)
-        self._writePrettyNewline()
+        self._rawBlock(u"CDATA section", XmlWriter._CDATA_START, XmlWriter._CDATA_END, text)
+
+    def processingInstruction(self, target, text):
+        """
+        Write a processing instruction.
+        
+        As example set up a writer:
+
+            >>> from StringIO import StringIO
+            >>> out = StringIO()
+            >>> xml = XmlWriter(out)
             
+        Now add the processing instruction:
+
+            >>> xml.processingInstruction("xsl-stylesheet", "href=\\"some.xsl\\" type=\\"text/xml\\"")
+
+        And the result is:
+
+            >>> print out.getvalue().rstrip("\\r\\n")
+            <?xsl-stylesheet href="some.xsl" type="text/xml"?>
+        """
+        targetName = u"target for processing instrution"
+        _validateNotNone(targetName, text)
+        _validateNotEmpty(targetName, text)
+        uniFullText = self._unicoded(target)
+        if text:
+            uniFullText += " "
+            uniFullText += self._unicoded(text)
+        self._rawBlock(u"processing instruction", XmlWriter._PROCESSING_START, XmlWriter._PROCESSING_END, uniFullText)
+
+    def _rawBlock(self, name, start, end, text):
+        _assertIsUnicode("name", name)
+        _assertIsUnicode("start", start)
+        _assertIsUnicode("end", end)
+        _validateNotNone(u"text for %s" % name, text)
+        uniText = self._unicoded(text)
+        if end in uniText:
+            raise XmlError("text for %s must not contain \"%s\"" % (name, end))
+        self._writePrettyIndent()
+        self._write(start)
+        self._write(uniText)
+        self._write(end)
+        self._writePrettyNewline()
+        
     def raw(self, text):
         """
         Write raw `text` without escaping, validation and pretty printing.
