@@ -15,13 +15,110 @@ Tests for loxun.
 #
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-import unittest
 import doctest
+import logging
+import sys
+import unittest
+from StringIO import StringIO
 
 import loxun
 
-if __name__ == "__main__":
-    suite = unittest.TestSuite()
-    suite.addTest(doctest.DocTestSuite(loxun))
-    runner = unittest.TextTestRunner()
-    runner.run(suite)
+def _createXmlStringIoWriter(pretty=True):
+    out = StringIO()
+    result = loxun.XmlWriter(out, pretty=pretty)
+    return result
+
+def _getXmlText(writer):
+    assert writer
+    writer.output.seek(0)
+    result = [line.rstrip("\r\n") for line in writer.output]
+    return result
+
+class XmlWriterTest(unittest.TestCase):
+    def _assertXmlTextEqual(self, writer, actual):
+        assert writer
+        self.assertEqual(_getXmlText(writer), actual)
+    
+    def testComment(self):
+        xml = _createXmlStringIoWriter()
+        xml.comment("some comment")
+        xml.close()
+        self._assertXmlTextEqual(xml, ["<!-- some comment -->"])
+
+        xml = _createXmlStringIoWriter()
+        xml.comment(" some comment ")
+        xml.close()
+        self._assertXmlTextEqual(xml, ["<!-- some comment -->"])
+
+        xml = _createXmlStringIoWriter()
+        xml.comment("")
+        xml.close()
+        self._assertXmlTextEqual(xml, ["<!--  -->"])
+
+        xml = _createXmlStringIoWriter()
+        xml.comment("some comment", embedInBlanks=False)
+        xml.close()
+        self._assertXmlTextEqual(xml, ["<!--some comment-->"])
+
+    def testCommentWithMultipleLines(self):
+        xml = _createXmlStringIoWriter()
+        xml.comment("some comment\nspawning multiple\nlines")
+        xml.close()
+        self._assertXmlTextEqual(xml, ["<!--", "some comment", "spawning multiple", "lines", "-->"])
+
+        xml = _createXmlStringIoWriter()
+        xml.startElement("tag")
+        xml.comment("some comment\nspawning multiple\nlines")
+        xml.endElement()
+        xml.close()
+        self._assertXmlTextEqual(xml, ["<tag>", "  <!--", "  some comment", "  spawning multiple", "  lines", "  -->", "</tag>"])
+
+    def testBrokenComment(self):
+        xml = _createXmlStringIoWriter()
+        self.assertRaises(loxun.XmlError, xml.comment, "--")
+        self.assertRaises(loxun.XmlError, xml.comment, "", embedInBlanks=False)
+        xml.close()
+        self._assertXmlTextEqual(xml, [])
+
+def createTestSuite():
+    """
+    TestSuite including all unit tests and doctests found in the source code.
+    """
+    result = unittest.TestSuite()
+    loader = unittest.TestLoader()
+
+    # TODO: Automatically discover doctest cases.
+    result.addTest(doctest.DocTestSuite(loxun))
+
+    # TODO: Automatically discover test cases.
+    allTests = [
+        XmlWriterTest
+    ]
+    for testCaseClass in allTests:
+        result.addTest(loader.loadTestsFromTestCase(testCaseClass))
+
+    return result
+
+def main():
+    """
+    Run all tests.
+    """
+    result = 0
+    testCount = 0
+    errorCount = 0
+    failureCount = 0
+
+    allTestSuite = createTestSuite()
+    testResults = unittest.TextTestRunner(verbosity=2).run(allTestSuite)
+    testCount += testResults.testsRun
+    failureCount += len(testResults.failures)
+    errorCount += len(testResults.errors)
+    print "test_all: ran %d tests with %d failures and %d errors" % (testCount, failureCount, errorCount)
+    if (errorCount + failureCount) > 0:
+        result = 1
+    return result
+
+if __name__ == "__main__": # pragma: no cover
+    logging.basicConfig()
+    logging.getLogger("test_loxun").setLevel(logging.WARNING)
+    sys.exit(main())

@@ -5,7 +5,7 @@ bit strings and no namespaces.
 
 loxun's features are:
 
-* **low memory foot print**: the document is created on the fly by writing to
+* **small memory foot print**: the document is created on the fly by writing to
   an output stream, no need to keep all of it in memory.
 
 * **easy to use namespaces**: simply add a namespace and refer to it using the
@@ -27,6 +27,36 @@ loxun's features are:
 * **open source**: distributed under the GNU Lesser General Public License 3
   or later.
 
+Here is a very basic example. First you have create an output stream. In many
+cases this would be a file, but for the sake of simplicity we use a
+``StringIO`` here: 
+
+    >>> from StringIO import StringIO
+    >>> out = StringIO()
+    >>> xml = XmlWriter(out)
+
+Now write the content:
+
+    >>> xml.prolog()
+    >>> xml.addNamespace("xhtml", "http://www.w3.org/1999/xhtml")
+    >>> xml.startElement("xhtml:html")
+    >>> xml.startElement("xhtml:body")
+    >>> xml.text("Hello world!")
+    >>> xml.element("xhtml:img", {"src": "smile.png", "alt": ":-)"})
+    >>> xml.endElement()
+    >>> xml.endElement()
+    >>> xml.close()
+
+Finally take a look at the results:
+
+    >>> print out.getvalue().rstrip("\\r\\n")
+    <xml version="1.0" encoding="utf-8">
+    <xhtml:html xlmns:xhtml="http://www.w3.org/1999/xhtml">
+      <xhtml:body>
+        Hello world!
+        <xhtml:img alt=":-)" src="smile.png"/>
+      </xhtml:body>
+    </xhtml:html>
 
 Writing a simple document
 =========================
@@ -34,7 +64,8 @@ Writing a simple document
 The following example creates a very simple XHTML document.
 
 To make it simple, the output goes to a string, but you could also use
-a file that has been created using ``open()``.
+a file that has been created using
+``codecs.open(filename, "wb", encoding)``.
 
     >>> from StringIO import StringIO
     >>> out = StringIO()
@@ -60,12 +91,11 @@ So in order to add::
 
 use:
 
-    >>> xml.startElement("body", {"id":"top"})
+    >>> xml.startElement("body", {"id": "top"})
 
 Let' add a little text so there is something to look at:
 
     >>> xml.text("Hello world!")
-    >>> xml.newline()
 
 Wrap it up: close all elements and the document.
 
@@ -79,7 +109,7 @@ And this is what we get:
     <xml version="1.0" encoding="utf-8">
     <html>
       <body id="top">
-    Hello world!
+        Hello world!
       </body>
     </html>
 
@@ -100,7 +130,6 @@ namespace and element name:
     >>> xml.startElement("xhtml:html")
     >>> xml.startElement("xhtml:body")
     >>> xml.text("Hello world!")
-    >>> xml.newline()
     >>> xml.endElement()
     >>> xml.endElement()
     >>> xml.close()
@@ -111,7 +140,7 @@ As a result, element names are now prefixed with "xhtml:":
     <xml version="1.0" encoding="utf-8">
     <xhtml:html xlmns:xhtml="http://www.w3.org/1999/xhtml">
       <xhtml:body>
-    Hello world!
+        Hello world!
       </xhtml:body>
     </xhtml:html>
 
@@ -156,6 +185,7 @@ Version 0.1, 15-May-2010
 import collections
 import os
 import xml.sax.saxutils
+from StringIO import StringIO
 
 VERSION = "0.2"
 REPOSITORY_ID, VERSION_DATE = "$Id$".split()[2:4]
@@ -166,7 +196,7 @@ class XmlError(Exception):
     """
     pass
 
-def quoted(value):
+def _quoted(value):
     _assertIsUnicode(u"value", value)
     return xml.sax.saxutils.quoteattr(value)
 
@@ -260,6 +290,21 @@ class XmlWriter(object):
         self._isOpen = True
         self._contentHasBeenWritten = False
 
+    @property
+    def isPretty(self):
+        """Pretty print the output?"""
+        return self._pretty
+
+    @property
+    def encoding(self):
+        """The encoding used when writing to the `output`."""
+        return self._encoding
+
+    @property
+    def output(self):
+        """The stream where the output goes, typically a filelike object."""
+        return self._output
+
     def _encoded(self, text):
         assert text is not None
         _assertIsUnicode(u"text", text)
@@ -299,8 +344,24 @@ class XmlWriter(object):
         assert text is not None
         _assertIsUnicode(u"text", text)
         self._output.write(self._encoded(text))
-        if text:
+        if not self._contentHasBeenWritten and text:
             self._contentHasBeenWritten = True
+
+    def _writeIndent(self):
+        self._write(self._indent * len(self._elementStack))
+
+    def _writePrettyIndent(self):
+        if self._pretty:
+            self._writeIndent()
+
+    def _writePrettyNewline(self):
+        if self._pretty:
+            self.newline()
+
+    def _writeEscaped(self, text):
+        assert text is not None
+        _assertIsUnicode("text", text)
+        self._write(xml.sax.saxutils.escape(text))
 
     def newline(self):
         self._write(self._newline)
@@ -341,7 +402,7 @@ class XmlWriter(object):
             <xml version="1.1" encoding="ascii">
         """
         self._write(u"<xml version=%s encoding=%s>" %
-            (quoted(version), quoted(self._encoding))
+            (_quoted(version), _quoted(self._encoding))
         )
         self.newline()
 
@@ -386,7 +447,7 @@ class XmlWriter(object):
             _assertIsUnicode(u"attribute name", attributeName)
             value = actualAttributes[attributeName]
             _assertIsUnicode(u"value of attribute %r" % attributeName, value)
-            self._write(u" %s=%s" % (attributeName, quoted(value)))
+            self._write(u" %s=%s" % (attributeName, _quoted(value)))
         if close == XmlWriter._CLOSE_AT_END:
             self._write(u"/")
         self._write(u">")
@@ -489,9 +550,83 @@ class XmlWriter(object):
             &lt;this&gt; &amp; &lt;that&gt;
         """
         _validateNotNone(u"text", text)
+        if self._pretty:
+            self._writeIndent()
         uniText = self._unicoded(text)
-        self._write(xml.sax.saxutils.escape(uniText))
+        self._writeEscaped(uniText)
+        if self._pretty:
+            self.newline()
 
+    def comment(self, text, embedInBlanks=True):
+        """
+        Add a comment to the output.
+        
+        As example set up a writer:
+
+            >>> from StringIO import StringIO
+            >>> out = StringIO()
+            >>> xml = XmlWriter(out)
+            
+        Now add the comment
+
+            >>> xml.comment("some comment")
+
+        And the result is:
+
+            >>> print out.getvalue().rstrip("\\r\\n")
+            <!-- some comment -->
+
+        A comment can spawn multiple lines. If pretty is enabled, the lines
+        will be indented. Again, first set up a writer:
+        
+            >>> from StringIO import StringIO
+            >>> out = StringIO()
+            >>> xml = XmlWriter(out)
+            
+        Then add the comment
+
+            >>> xml.comment("some comment\\nspawning mutiple\\nlines")
+
+        And the result is:
+
+            >>> print out.getvalue().rstrip("\\r\\n")
+            <!--
+            some comment
+            spawning mutiple
+            lines
+            -->
+        """
+        uniText = self._unicoded(text)
+        if not embedInBlanks and not uniText:
+            raise XmlError("text for comment must not be empty, or option embedInBlanks=True must be set")
+        if u"--" in uniText:
+            raise XmlError("text for comment must not contain \"--\"")
+        hasNewline = (u"\n" in uniText) or (u"\r" in uniText)
+        hasStartBlank = uniText and uniText[0].isspace()
+        hasEndBlank = (len(uniText) > 1) and uniText[-1].isspace()
+        self._writePrettyIndent()
+        self._write(u"<!--");
+        if hasNewline:
+            if self._pretty:
+                self.newline()
+            elif embedInBlanks and not hasStartBlank:
+                self._write(u" ")
+            for uniLine in StringIO(uniText):
+                if self._pretty:
+                    self._writeIndent()
+                self._writeEscaped(uniLine.rstrip("\n\r"))
+                self.newline()
+            self._writePrettyIndent()
+        else:
+            if embedInBlanks and not hasStartBlank:
+                self._write(u" ")
+            self._writeEscaped(uniText)
+            if embedInBlanks and not hasEndBlank:
+                self._write(u" ")
+        self._write(u"-->");
+        if self._pretty:
+            self.newline()
+        
     def raw(self, text):
         """
         Write raw `text` without escaping or validating anything.
