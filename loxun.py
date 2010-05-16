@@ -142,6 +142,7 @@ As a result, tag names are now prefixed with "xhtml:":
     </xhtml:html>
 
 Changing the XML prolog
+-----------------------
 
 When you create a writer, it automatically write an XML prolog
 processing instruction to the output. This is what the default prolog
@@ -182,7 +183,7 @@ Version 0.3, 17-May-2010
 * Changed ``text()`` to normalize newlines and white space if pretty printing
   is enabled.
 
-* Moved writing of XML prolog to the constructor and removed ``prolog()`. To
+* Moved writing of XML prolog to the constructor and removed ``prolog()``. To
   omit the prolog, specify ``prolog=False`` when creating the ``XmlWriter``.
   If you later want to write the prolog yourself, use
   ``processingInstruction()``.
