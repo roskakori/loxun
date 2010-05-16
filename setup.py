@@ -65,7 +65,7 @@ setup(
     license="GNU Lesser General Public License 3 or later",
     long_description=loxun.__doc__, #@UndefinedVariable
     classifiers=[
-        "Development Status :: 4 - Beta",
+        "Development Status :: 3 - Alpha",
         "Environment :: Plugins",
         "Intended Audience :: Developers",
         "License :: OSI Approved :: GNU Library or Lesser General Public License (LGPL)",
