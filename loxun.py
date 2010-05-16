@@ -340,7 +340,10 @@ class XmlWriter(object):
         typically a filelike object. The writer accesses the ``output`` as
         stream, so it does not have to support any methods for random
         access like ``seek()``.
-
+        
+        In case you write to a file, use ``"wb"`` as ``mode`` for ``open()``
+        to prevent messed up newlines.
+        
         Set ``pretty`` to ``False`` if you do not want to the writer to pretty
         print. Keep in mind though that this results in the whole output being
         a single line unless you use `newline()` or write text with newline
@@ -356,7 +359,7 @@ class XmlWriter(object):
         XML prolog processing instruction (like
         ``<?xml version="1.0" encoding="utf-8"?>``).
         
-        Set ``version`` to the value the ``version`` attribute in the XML prolog
+        Set ``version`` to the value the version attribute in the XML prolog
         should have.
         """
         assert output is not None
