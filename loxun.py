@@ -270,10 +270,15 @@ def _joinPossiblyQualifiedName(namespace, name):
     return result
 
 class XmlWriter(object):
+    # Marks to start/end CDATA.
+    _CDATA_START = u"<![CDATA["
+    _CDATA_END = u"]]>"
+
+    # Possible value for _writeElement()'s ``close`` parameter.
     _CLOSE_NONE = u"none"
     _CLOSE_AT_START = u"start"
     _CLOSE_AT_END = u"end"
-
+    
     def __init__(self, output, pretty=True, encoding=u"utf-8", errors=u"strict"):
         assert output is not None
         assert encoding
@@ -626,10 +631,41 @@ class XmlWriter(object):
         self._write(u"-->");
         if self._pretty:
             self.newline()
+
+    def cdata(self, text):
+        """
+        Write a CDATA section.
         
+        As example set up a writer:
+
+            >>> from StringIO import StringIO
+            >>> out = StringIO()
+            >>> xml = XmlWriter(out)
+            
+        Now add the comment
+
+            >>> xml.cdata("some data\\nlines\\n<tag>&&&")
+
+        And the result is:
+
+            >>> print out.getvalue().rstrip("\\r\\n")
+            <![CDATA[some data
+            lines
+            <tag>&&&]]>
+        """
+        _validateNotNone(u"text", text)
+        uniText = self._unicoded(text)
+        if XmlWriter._CDATA_END in uniText:
+            raise XmlError("text for cdata must not contain \"%s\"" % XmlWriter._CDATA_END)
+        self._writePrettyIndent()
+        self._write(XmlWriter._CDATA_START)
+        self._write(uniText)
+        self._write(XmlWriter._CDATA_END)
+        self._writePrettyNewline()
+            
     def raw(self, text):
         """
-        Write raw `text` without escaping or validating anything.
+        Write raw `text` without escaping, validation and pretty printing.
 
         Using a writer like
 
@@ -637,8 +673,16 @@ class XmlWriter(object):
             >>> out = StringIO()
             >>> xml = XmlWriter(out)
 
-        you can do evil things like this:
+        you can use ``raw`` for good and add for exmaple a doctype declaration:
+        
+            >>> xml.raw("<!DOCTYPE html PUBLIC \\"-//W3C//DTD XHTML 1.0 Transitional//EN\\" \\"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\\">")
+            >>> print out.getvalue().rstrip("\\r\\n")
+            <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
+        but you can also do all sorts of evil things which can invalidate the XML document:
+
+            >>> out = StringIO()
+            >>> xml = XmlWriter(out)
             >>> xml.raw(">(^_^)<  not particular valid XML &&&")
             >>> print out.getvalue().rstrip("\\r\\n")
             >(^_^)<  not particular valid XML &&&
