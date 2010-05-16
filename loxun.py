@@ -369,6 +369,7 @@ class XmlWriter(object):
         self._output = output
         self._pretty = pretty
         # TODO: Add indent parameter and property.
+        # TODO: Add newline parameter.
         self._indent = u"  "
         self._newline = unicode(os.linesep, "ascii")
         self._encoding = self._unicoded(encoding)
@@ -623,14 +624,42 @@ class XmlWriter(object):
             >>> xml.text("<this> & <that>")
             >>> print out.getvalue().rstrip("\\r\\n")
             &lt;this&gt; &amp; &lt;that&gt;
+
+        If ``text`` contains line feeds, the will be normalized to `newline()`:
+
+            >>> out = StringIO()
+            >>> xml = XmlWriter(out, prolog=False)
+            >>> xml.startTag("some")
+            >>> xml.text("a text\\nwith multiple lines\\n    and indentation and trailing blanks   ")
+            >>> xml.endTag()
+            >>> print out.getvalue().rstrip("\\r\\n")
+            <some>
+              a text
+              with multiple lines
+              and indentation and trailing blanks
+            </some>
+
+        Empty text does not result in any output:
+
+            >>> out = StringIO()
+            >>> xml = XmlWriter(out, prolog=False)
+            >>> xml.startTag("some")
+            >>> xml.text("")
+            >>> xml.endTag()
+            >>> print out.getvalue().rstrip("\\r\\n")
+            <some>
+            </some>
         """
         _validateNotNone(u"text", text)
-        if self._pretty:
-            self._writeIndent()
         uniText = self._unicoded(text)
-        self._writeEscaped(uniText)
         if self._pretty:
-            self.newline()
+            for uniLine in StringIO(uniText):
+                self._writeIndent()
+                uniLine = uniLine.lstrip(" \t").rstrip(" \t\r\n")
+                self._writeEscaped(uniLine)
+                self.newline()
+        else:
+            self._writeEscaped(uniText)
 
     def comment(self, text, embedInBlanks=True):
         """
