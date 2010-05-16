@@ -37,7 +37,6 @@ cases this would be a file, but for the sake of simplicity we use a
 
 Now write the content:
 
-    >>> xml.prolog()
     >>> xml.addNamespace("xhtml", "http://www.w3.org/1999/xhtml")
     >>> xml.startTag("xhtml:html")
     >>> xml.startTag("xhtml:body")
@@ -47,14 +46,14 @@ Now write the content:
     >>> xml.endTag()
     >>> xml.close()
 
-Finally take a look at the results:
+And the result is:
 
     >>> print out.getvalue().rstrip("\\r\\n")
     <?xml version="1.0" encoding="utf-8"?>
     <xhtml:html xlmns:xhtml="http://www.w3.org/1999/xhtml">
       <xhtml:body>
         Hello world!
-        <xhtml:img alt=":-)" src="smile.png"/>
+        <xhtml:img alt=":-)" src="smile.png" />
       </xhtml:body>
     </xhtml:html>
 
@@ -74,9 +73,8 @@ First create an `XmlWriter` to write the XML code to the specified output:
 
     >>> xml = XmlWriter(out)
 
-Then add the document prolog:
+This automatically adds the XML prolog:
 
-    >>> xml.prolog()
     >>> print out.getvalue().rstrip("\\r\\n")
     <?xml version="1.0" encoding="utf-8"?>
 
@@ -118,7 +116,6 @@ and header like above:
 
     >>> out = StringIO()
     >>> xml = XmlWriter(out)
-    >>> xml.prolog()
 
 Next add the namespace:
 
@@ -144,8 +141,45 @@ As a result, tag names are now prefixed with "xhtml:":
       </xhtml:body>
     </xhtml:html>
 
+Changing the XML prolog
+
+    When you create a writer, it automatically write an XML prolog
+    processing instruction to the output. This is what the default prolog
+    looks like:
+
+        >>> from StringIO import StringIO
+        >>> out = StringIO()
+        >>> xml = XmlWriter(out)
+        >>> print out.getvalue().rstrip("\\r\\n")
+        <?xml version="1.0" encoding="utf-8"?>
+
+    You can change the version or encoding:
+
+        >>> out = StringIO()
+        >>> xml = XmlWriter(out, encoding=u"ascii", version=u"1.1")
+        >>> print out.getvalue().rstrip("\\r\\n")
+        <?xml version="1.1" encoding="ascii"?>
+
+    To completely omit the prolog, set the parameter ``prolog=False``:
+    
+        >>> out = StringIO()
+        >>> xml = XmlWriter(out, prolog=False)
+        >>> out.getvalue()
+        ''
+
 Version history
 ===============
+
+Version 0.3, 17-May-2010
+------------------------
+
+* Moved writing of XML prolog to the constructor and removed ``prolog()`. To
+  omit the prolog, specify ``prolog=False`` when creating the ``XmlWriter``.
+  If you later want to write the prolog yourself, use
+  ``processingInstruction()``.
+
+* Renamed ``*Element()`` to ``*Tag`` because they really only write tags, not
+  whole elements.
 
 Version 0.2, 16-May-2010
 ------------------------
@@ -207,7 +241,7 @@ def _quoted(value):
 
 def _validateNotEmpty(name, value):
     """
-    Validates that `value` is not empty or `None` and raises `XmlError` in case it is.
+    Validate that `value` is not empty and raise `XmlError` in case it is.
     """
     assert name
     if not value:
@@ -215,12 +249,18 @@ def _validateNotEmpty(name, value):
 
 def _validateNotNone(name, value):
     """
-    Validates that `value` is not `None` and raises `XmlError` in case it is.
+    Validate that `value` is not `None` and raise `XmlError` in case it is.
     """
     assert name
     if value is None:
         raise XmlError(u"%s must not be %r" % (name, None))
 
+def _validateNotNoneOrEmpty(name, value):
+    """
+    Validate that `value` is not empty or `None` and raise `XmlError` in case it is.
+    """
+    _validateNotNone(name, value)
+    _validateNotEmpty(name, value)
 
 def _assertIsUnicode(name, value):
     assert (value is None) or isinstance(value, unicode), \
@@ -275,6 +315,10 @@ def _joinPossiblyQualifiedName(namespace, name):
     return result
 
 class XmlWriter(object):
+    """
+    Writer for large output in XML optionally supporting Unicode and
+    namespaces.
+    """
     # Marks to start/end CDATA.
     _CDATA_START = u"<![CDATA["
     _CDATA_END = u"]]>"
@@ -288,12 +332,40 @@ class XmlWriter(object):
     _CLOSE_AT_START = u"start"
     _CLOSE_AT_END = u"end"
     
-    def __init__(self, output, pretty=True, encoding=u"utf-8", errors=u"strict"):
+    def __init__(self, output, pretty=True, encoding=u"utf-8", errors=u"strict", prolog=True, version=u"1.0"):
+        """
+        Initialize `XmlWriter` writing to `output`.
+        
+        The `output` can be anything that has a `write(data)` method,
+        typically a filelike object. The writer accesses the `output` as
+        stream, so it does not have to support any methods for random
+        access like `seek()`.
+
+        Set `pretty` to `False` if you do not want to the writer to pretty
+        print. Keep in mind though that this results in the whole output being
+        a single line unless you use `newline()` or write text with newline
+        characters in it.
+        
+        Set `encoding` to the name of the preferred output encoding.
+        
+        Set `errors` to one of the value possible value for
+        ``unicode(..., error=...)`` if you do not want the output to fail with
+        a `UnicodeError` in case a character cannot be encoded.
+        
+        Set `prolog` to `False` if you do not want the writer to emit an XML
+        prolog processing instruction (like
+        ``<?xml version="1.0" encoding="utf-8"?>``).
+        
+        Set `version` to the value the ``version`` attribute in the XML prolog
+        should have.
+        """
         assert output is not None
         assert encoding
         assert errors
+        _validateNotNoneOrEmpty("version", version)
         self._output = output
         self._pretty = pretty
+        # TODO: Add indent parameter and property.
         self._indent = u"  "
         self._newline = unicode(os.linesep, "ascii")
         self._encoding = self._unicoded(encoding)
@@ -303,6 +375,11 @@ class XmlWriter(object):
         self._namespacesToAdd = collections.deque()
         self._isOpen = True
         self._contentHasBeenWritten = False
+        if prolog:
+            self.processingInstruction(u"xml", "version=%s encoding=%s" % ( \
+                _quoted(self._unicoded(version)),
+                _quoted(self._encoding))
+            )
 
     @property
     def isPretty(self):
@@ -316,7 +393,7 @@ class XmlWriter(object):
 
     @property
     def output(self):
-        """The stream where the output goes, typically a filelike object."""
+        """The stream where the output goes."""
         return self._output
 
     def _encoded(self, text):
@@ -381,43 +458,20 @@ class XmlWriter(object):
         self._write(self._newline)
 
     def addNamespace(self, name, uri):
-        assert name
-        assert uri
+        """
+        Add namespace to the next element, added a proper ``xlmns`` to the
+        next tag that that is written using ``startTag`` or ``tag``.
+        """
+        _validateNotNoneOrEmpty("name", name)
+        _validateNotNoneOrEmpty("uri", uri)
         if self._elementStack:
-            raise NotImplemented(u"currently namespace must be added before first tag")
+            raise NotImplemented(u"currently namespace must be added before the first tag")
 
         uniName = self._unicoded(name)
         uniUri = self._unicoded(uri)
         if uniName in self._namespaces:
             raise ValueError(u"namespace %r must added only once but already is %r" % (uniName, uniUri))
         self._namespacesToAdd.append((uniName, uniUri))
-
-    def prolog(self, version=u"1.0"):
-        """
-        Write the XML prolog.
-
-        The encoding depends on the encoding specified when initializing the writer.
-
-        This is what the default prolog looks like:
-
-            >>> from StringIO import StringIO
-            >>> out = StringIO()
-            >>> xml = XmlWriter(out)
-            >>> xml.prolog()
-            >>> print out.getvalue().rstrip("\\r\\n")
-            <?xml version="1.0" encoding="utf-8"?>
-
-        You can change the version or encoding:
-
-            >>> out = StringIO()
-            >>> xml = XmlWriter(out, encoding=u"ascii")
-            >>> xml.prolog(u"1.1")
-            >>> print out.getvalue().rstrip("\\r\\n")
-            <?xml version="1.1" encoding="ascii"?>
-        """
-        self.processingInstruction(u"xml", "version=%s encoding=%s" %
-            (_quoted(version), _quoted(self._encoding))
-        )
 
     def _writeTag(self, namespace, name, close, attributes={}):
         _assertIsUnicode("namespace", namespace)
@@ -462,6 +516,8 @@ class XmlWriter(object):
             _assertIsUnicode(u"value of attribute %r" % attributeName, value)
             self._write(u" %s=%s" % (attributeName, _quoted(value)))
         if close == XmlWriter._CLOSE_AT_END:
+            if self.isPretty:
+                self._write(u" ")
             self._write(u"/")
         self._write(u">")
         if self._pretty:
@@ -554,7 +610,7 @@ class XmlWriter(object):
 
             >>> from StringIO import StringIO
             >>> out = StringIO()
-            >>> xml = XmlWriter(out)
+            >>> xml = XmlWriter(out, prolog=False)
 
         you can write some text:
 
@@ -578,7 +634,7 @@ class XmlWriter(object):
 
             >>> from StringIO import StringIO
             >>> out = StringIO()
-            >>> xml = XmlWriter(out)
+            >>> xml = XmlWriter(out, prolog=False)
             
         Now add the comment
 
@@ -594,7 +650,7 @@ class XmlWriter(object):
         
             >>> from StringIO import StringIO
             >>> out = StringIO()
-            >>> xml = XmlWriter(out)
+            >>> xml = XmlWriter(out, prolog=False)
             
         Then add the comment
 
@@ -648,7 +704,7 @@ class XmlWriter(object):
 
             >>> from StringIO import StringIO
             >>> out = StringIO()
-            >>> xml = XmlWriter(out)
+            >>> xml = XmlWriter(out, prolog=False)
             
         Now add the CDATA section:
 
@@ -671,7 +727,7 @@ class XmlWriter(object):
 
             >>> from StringIO import StringIO
             >>> out = StringIO()
-            >>> xml = XmlWriter(out)
+            >>> xml = XmlWriter(out, prolog=False)
             
         Now add the processing instruction:
 
@@ -713,7 +769,7 @@ class XmlWriter(object):
 
             >>> from StringIO import StringIO
             >>> out = StringIO()
-            >>> xml = XmlWriter(out)
+            >>> xml = XmlWriter(out, prolog=False)
 
         you can use ``raw`` for good and add for exmaple a doctype declaration:
         
@@ -724,7 +780,7 @@ class XmlWriter(object):
         but you can also do all sorts of evil things which can invalidate the XML document:
 
             >>> out = StringIO()
-            >>> xml = XmlWriter(out)
+            >>> xml = XmlWriter(out, prolog=False)
             >>> xml.raw(">(^_^)<  not particular valid XML &&&")
             >>> print out.getvalue().rstrip("\\r\\n")
             >(^_^)<  not particular valid XML &&&

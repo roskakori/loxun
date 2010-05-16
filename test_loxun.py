@@ -23,9 +23,9 @@ from StringIO import StringIO
 
 import loxun
 
-def _createXmlStringIoWriter(pretty=True):
+def _createXmlStringIoWriter(pretty=True, prolog=False):
     out = StringIO()
-    result = loxun.XmlWriter(out, pretty=pretty)
+    result = loxun.XmlWriter(out, pretty=pretty, prolog=prolog)
     return result
 
 def _getXmlText(writer):
