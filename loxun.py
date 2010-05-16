@@ -143,32 +143,36 @@ As a result, tag names are now prefixed with "xhtml:":
 
 Changing the XML prolog
 
-    When you create a writer, it automatically write an XML prolog
-    processing instruction to the output. This is what the default prolog
-    looks like:
+When you create a writer, it automatically write an XML prolog
+processing instruction to the output. This is what the default prolog
+looks like:
 
-        >>> from StringIO import StringIO
-        >>> out = StringIO()
-        >>> xml = XmlWriter(out)
-        >>> print out.getvalue().rstrip("\\r\\n")
-        <?xml version="1.0" encoding="utf-8"?>
+    >>> from StringIO import StringIO
+    >>> out = StringIO()
+    >>> xml = XmlWriter(out)
+    >>> print out.getvalue().rstrip("\\r\\n")
+    <?xml version="1.0" encoding="utf-8"?>
 
-    You can change the version or encoding:
+You can change the version or encoding:
 
-        >>> out = StringIO()
-        >>> xml = XmlWriter(out, encoding=u"ascii", version=u"1.1")
-        >>> print out.getvalue().rstrip("\\r\\n")
-        <?xml version="1.1" encoding="ascii"?>
+    >>> out = StringIO()
+    >>> xml = XmlWriter(out, encoding=u"ascii", version=u"1.1")
+    >>> print out.getvalue().rstrip("\\r\\n")
+    <?xml version="1.1" encoding="ascii"?>
 
-    To completely omit the prolog, set the parameter ``prolog=False``:
-    
-        >>> out = StringIO()
-        >>> xml = XmlWriter(out, prolog=False)
-        >>> out.getvalue()
-        ''
+To completely omit the prolog, set the parameter ``prolog=False``:
+
+    >>> out = StringIO()
+    >>> xml = XmlWriter(out, prolog=False)
+    >>> out.getvalue()
+    ''
 
 Version history
 ===============
+
+Version 0.4, xx-May-2010
+
+* ...
 
 Version 0.3, 17-May-2010
 ------------------------
@@ -231,7 +235,7 @@ import os
 import xml.sax.saxutils
 from StringIO import StringIO
 
-__version__ = "0.3"
+__version__ = "0.4"
 VERSION_REV, VERSION_DATE = "$Id$".split()[2:4]
 
 class XmlError(Exception):
