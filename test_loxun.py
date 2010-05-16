@@ -67,9 +67,9 @@ class XmlWriterTest(unittest.TestCase):
         self._assertXmlTextEqual(xml, ["<!--", "some comment", "spawning multiple", "lines", "-->"])
 
         xml = _createXmlStringIoWriter()
-        xml.startElement("tag")
+        xml.startTag("tag")
         xml.comment("some comment\nspawning multiple\nlines")
-        xml.endElement()
+        xml.endTag()
         xml.close()
         self._assertXmlTextEqual(xml, ["<tag>", "  <!--", "  some comment", "  spawning multiple", "  lines", "  -->", "</tag>"])
 

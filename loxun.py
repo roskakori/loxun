@@ -9,11 +9,11 @@ loxun's features are:
   an output stream, no need to keep all of it in memory.
 
 * **easy to use namespaces**: simply add a namespace and refer to it using the
-  standard ``namespace:element`` syntax.
+  standard ``namespace:tag`` syntax.
 
 * **mix unicode and string**: pass both unicode or plain 8 bit strings to any
   of the methods. Internally loxun converts them to unicode, so once a
-  parameter got accepted by the API you can rely on it not resulting in any
+  parameter got accepted by the API you can rely on it not causing any
   messy ``UnicodeError`` trouble.
 
 * **automatic escaping**: no need to manually handle special characters such
@@ -39,12 +39,12 @@ Now write the content:
 
     >>> xml.prolog()
     >>> xml.addNamespace("xhtml", "http://www.w3.org/1999/xhtml")
-    >>> xml.startElement("xhtml:html")
-    >>> xml.startElement("xhtml:body")
+    >>> xml.startTag("xhtml:html")
+    >>> xml.startTag("xhtml:body")
     >>> xml.text("Hello world!")
-    >>> xml.element("xhtml:img", {"src": "smile.png", "alt": ":-)"})
-    >>> xml.endElement()
-    >>> xml.endElement()
+    >>> xml.tag("xhtml:img", {"src": "smile.png", "alt": ":-)"})
+    >>> xml.endTag()
+    >>> xml.endTag()
     >>> xml.close()
 
 Finally take a look at the results:
@@ -80,9 +80,9 @@ Then add the document prolog:
     >>> print out.getvalue().rstrip("\\r\\n")
     <?xml version="1.0" encoding="utf-8"?>
 
-Next add the ``<html>`` start element:
+Next add the ``<html>`` start tag:
 
-    >>> xml.startElement("html")
+    >>> xml.startTag("html")
 
 Now comes the <body>. To pass attributes, specify them in a dictionary.
 So in order to add::
@@ -91,7 +91,7 @@ So in order to add::
 
 use:
 
-    >>> xml.startElement("body", {"id": "top"})
+    >>> xml.startTag("body", {"id": "top"})
 
 Let' add a little text so there is something to look at:
 
@@ -99,8 +99,8 @@ Let' add a little text so there is something to look at:
 
 Wrap it up: close all elements and the document.
 
-    >>> xml.endElement()
-    >>> xml.endElement()
+    >>> xml.endTag()
+    >>> xml.endTag()
     >>> xml.close()
 
 And this is what we get:
@@ -124,17 +124,17 @@ Next add the namespace:
 
     >>> xml.addNamespace("xhtml", "http://www.w3.org/1999/xhtml")
 
-Now elements can use qualified element names using a colon (:) to separate
-namespace and element name:
+Now elements can use qualified tag names using a colon (:) to separate
+namespace and tag name:
 
-    >>> xml.startElement("xhtml:html")
-    >>> xml.startElement("xhtml:body")
+    >>> xml.startTag("xhtml:html")
+    >>> xml.startTag("xhtml:body")
     >>> xml.text("Hello world!")
-    >>> xml.endElement()
-    >>> xml.endElement()
+    >>> xml.endTag()
+    >>> xml.endTag()
     >>> xml.close()
 
-As a result, element names are now prefixed with "xhtml:":
+As a result, tag names are now prefixed with "xhtml:":
 
     >>> print out.getvalue().rstrip("\\r\\n")
     <?xml version="1.0" encoding="utf-8"?>
@@ -192,7 +192,7 @@ import os
 import xml.sax.saxutils
 from StringIO import StringIO
 
-VERSION = "0.2"
+VERSION = "0.3"
 REPOSITORY_ID, VERSION_DATE = "$Id$".split()[2:4]
 
 class XmlError(Exception):
@@ -232,12 +232,12 @@ def _splitPossiblyQualifiedName(name, value):
 
     A fully qualified name:
 
-        >>> _splitPossiblyQualifiedName(u"element name", u"xhtml:img")
+        >>> _splitPossiblyQualifiedName(u"tag name", u"xhtml:img")
         (u'xhtml', u'img')
 
     A name in the default namespace:
 
-        >>> _splitPossiblyQualifiedName(u"element name", u"img")
+        >>> _splitPossiblyQualifiedName(u"tag name", u"img")
         (None, u'img')
 
     Improper names result in an `XmlError`:
@@ -283,7 +283,7 @@ class XmlWriter(object):
     _PROCESSING_START = u"<?"
     _PROCESSING_END = u"?>"
 
-    # Possible value for _writeElement()'s ``close`` parameter.
+    # Possible value for _writeTag()'s ``close`` parameter.
     _CLOSE_NONE = u"none"
     _CLOSE_AT_START = u"start"
     _CLOSE_AT_END = u"end"
@@ -384,7 +384,7 @@ class XmlWriter(object):
         assert name
         assert uri
         if self._elementStack:
-            raise NotImplemented(u"currently namespace must be added before first element")
+            raise NotImplemented(u"currently namespace must be added before first tag")
 
         uniName = self._unicoded(name)
         uniUri = self._unicoded(uri)
@@ -419,7 +419,7 @@ class XmlWriter(object):
             (_quoted(version), _quoted(self._encoding))
         )
 
-    def _writeElement(self, namespace, name, close, attributes={}):
+    def _writeTag(self, namespace, name, close, attributes={}):
         _assertIsUnicode("namespace", namespace)
         assert name
         _assertIsUnicode("name", name)
@@ -445,7 +445,7 @@ class XmlWriter(object):
             self._validateNamespaceItem(u"attribute", attributeNamespace, attributeName)
             actualAttributes[uniQualifiedAttributeName] = self._unicoded(attributeValue)
 
-        self._validateNamespaceItem(u"element", namespace, name)
+        self._validateNamespaceItem(u"tag", namespace, name)
         if namespace:
             element = u"%s:%s" % (namespace, name)
         else:
@@ -467,9 +467,9 @@ class XmlWriter(object):
         if self._pretty:
             self.newline()
 
-    def startElement(self, qualifiedName, attributes={}):
+    def startTag(self, qualifiedName, attributes={}):
         """
-        Start element with name `qualifiedName`, optionally using a namespace
+        Start tag with name `qualifiedName`, optionally using a namespace
         prefix separated with a colon (:) and `attributes`.
 
         Example names are "img" and "xhtml:img" (assuming the namespace prefix
@@ -484,13 +484,13 @@ class XmlWriter(object):
         }
         """
         uniQualifiedName = self._unicoded(qualifiedName)
-        namespace, name = _splitPossiblyQualifiedName(u"element name", uniQualifiedName)
-        self._writeElement(namespace, name, XmlWriter._CLOSE_NONE, attributes)
+        namespace, name = _splitPossiblyQualifiedName(u"tag name", uniQualifiedName)
+        self._writeTag(namespace, name, XmlWriter._CLOSE_NONE, attributes)
         self._elementStack.append((namespace, name))
 
-    def endElement(self, expectedQualifiedName=None):
+    def endTag(self, expectedQualifiedName=None):
         """
-        End element that has been started before using `startElement`,
+        End tag that has been started before using `startTag`,
         optionally checking that the name matches `expectedQualifiedName`.
 
         As example, consider the following writer with a namespace:
@@ -502,49 +502,49 @@ class XmlWriter(object):
 
             Now start a couple of elements:
 
-            >>> xml.startElement("html")
-            >>> xml.startElement("head")
-            >>> xml.startElement("xhtml:body")
+            >>> xml.startTag("html")
+            >>> xml.startTag("head")
+            >>> xml.startTag("xhtml:body")
 
-            Try to end a mistyped element:
+            Try to end a mistyped tag:
 
-            >>> xml.endElement("xhtml:doby")
+            >>> xml.endTag("xhtml:doby")
             Traceback (most recent call last):
                 ...
-            XmlError: element name must be xhtml:doby but is xhtml:body
+            XmlError: tag name must be xhtml:doby but is xhtml:body
 
             Try again properly:
 
-            >>> xml.endElement("xhtml:body")
+            >>> xml.endTag("xhtml:body")
 
-            End an element without an expected name:
+            End an tag without an expected name:
 
-            >>> xml.endElement()
+            >>> xml.endTag()
 
-            Try to end another mistyped element, this time without namespace:
+            Try to end another mistyped tag, this time without namespace:
 
-            >>> xml.endElement("xml")
+            >>> xml.endTag("xml")
             Traceback (most recent call last):
                 ...
-            XmlError: element name must be xml but is html
+            XmlError: tag name must be xml but is html
         """
         try:
             (namespace, name) = self._elementStack.pop()
         except IndexError:
-            raise XmlError(u"element stack must not be empty")
+            raise XmlError(u"tag stack must not be empty")
         if expectedQualifiedName:
-            # Validate that actual element name matches expected name.
+            # Validate that actual tag name matches expected name.
             uniExpectedQualifiedName = self._unicoded(expectedQualifiedName)
             actualQualifiedName = _joinPossiblyQualifiedName(namespace, name)
             if actualQualifiedName != expectedQualifiedName:
                 self._elementStack.append((namespace, name))
-                raise XmlError(u"element name must be %s but is %s" % (uniExpectedQualifiedName, actualQualifiedName))
-        self._writeElement(namespace, name, XmlWriter._CLOSE_AT_START)
+                raise XmlError(u"tag name must be %s but is %s" % (uniExpectedQualifiedName, actualQualifiedName))
+        self._writeTag(namespace, name, XmlWriter._CLOSE_AT_START)
 
-    def element(self, qualifiedName, attributes={}):
+    def tag(self, qualifiedName, attributes={}):
         uniQualifiedName = self._unicoded(qualifiedName)
-        namespace, name = _splitPossiblyQualifiedName(u"element name", uniQualifiedName)
-        self._writeElement(namespace, name, XmlWriter._CLOSE_AT_END, attributes)
+        namespace, name = _splitPossiblyQualifiedName(u"tag name", uniQualifiedName)
+        self._writeTag(namespace, name, XmlWriter._CLOSE_AT_END, attributes)
 
     def text(self, text):
         """
@@ -744,9 +744,9 @@ class XmlWriter(object):
             >>> out = StringIO()
             >>> xml = XmlWriter(out)
 
-        you can write an element without closing it:
+        you can write an tag without closing it:
 
-            >>> xml.startElement("some")
+            >>> xml.startTag("some")
 
         However, once you try to close the writer, you get:
             >>> xml.close()
