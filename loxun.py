@@ -173,6 +173,11 @@ Version history
 Version 0.3, 17-May-2010
 ------------------------
 
+* Added scoped namespaces which are removed automatically by ``endTag()``.
+
+* Changed ``text()`` to normalize newlines and white space if pretty printing
+  is enabled.
+
 * Moved writing of XML prolog to the constructor and removed ``prolog()`. To
   omit the prolog, specify ``prolog=False`` when creating the ``XmlWriter``.
   If you later want to write the prolog yourself, use
@@ -400,6 +405,9 @@ class XmlWriter(object):
         """The stream where the output goes."""
         return self._output
 
+    def _scope(self):
+        return len(self._elementStack)
+
     def _encoded(self, text):
         assert text is not None
         _assertIsUnicode(u"text", text)
@@ -432,7 +440,15 @@ class XmlWriter(object):
 
     def _validateNamespaceItem(self, itemName, namespace, qualifiedName):
         if namespace:
-            if namespace not in self._namespaces:
+            namespaceFound = False
+            scopeIndex = self._scope()
+            while not namespaceFound and (scopeIndex >= 0):
+                namespacesForScope = self._namespaces.get(scopeIndex)
+                if namespacesForScope:
+                    if namespace in [namespaceToCompareWith for namespaceToCompareWith, _ in namespacesForScope]:
+                        namespaceFound = True
+                scopeIndex -= 1
+            if not namespaceFound:
                 raise XmlError(u"namespace '%s' for %s '%s' must be added before use" % (namespace, itemName, qualifiedName))
 
     def _write(self, text):
@@ -463,18 +479,20 @@ class XmlWriter(object):
 
     def addNamespace(self, name, uri):
         """
-        Add namespace to the next element, added a proper ``xlmns`` to the
-        next tag that that is written using `startTag()` or `tag()`.
+        Add namespace to the following elements by adding a ``xlmns``
+        attribute to the next tag that is written using `startTag()` or `tag()`.
         """
+        # TODO: Validate that name is NCName.
         _validateNotNoneOrEmpty("name", name)
         _validateNotNoneOrEmpty("uri", uri)
-        if self._elementStack:
-            raise NotImplemented(u"currently namespace must be added before the first tag")
-
         uniName = self._unicoded(name)
         uniUri = self._unicoded(uri)
-        if uniName in self._namespaces:
-            raise ValueError(u"namespace %r must added only once but already is %r" % (uniName, uniUri))
+        namespacesForScope = self._namespaces.get(self._scope())
+        namespaceExists = (uniName in self._namespacesToAdd) or (
+            (namespacesForScope != None) and (uniName in namespacesForScope)
+        )
+        if namespaceExists:
+            raise ValueError(u"namespace %r must added only once for current scope but already is %r" % (uniName, uniUri))
         self._namespacesToAdd.append((uniName, uniUri))
 
     def _writeTag(self, namespace, name, close, attributes={}):
@@ -487,14 +505,27 @@ class XmlWriter(object):
 
         actualAttributes = {}
 
+        # TODO: Validate that no "xlmns" attributes are specified by hand.
+
         # Process new namespaces to add.
-        while self._namespacesToAdd:
-            namespaceName, uri = self._namespacesToAdd.pop()
-            if namespaceName:
-                actualAttributes[u"xlmns:%s" % namespaceName] = uri
-            else:
-                actualAttributes[u"xlmns"] = uri
-            self._namespaces[namespaceName] = uri
+        if close == XmlWriter._CLOSE_NONE:
+            while self._namespacesToAdd:
+                namespaceName, uri = self._namespacesToAdd.pop()
+                if namespaceName:
+                    actualAttributes[u"xlmns:%s" % namespaceName] = uri
+                else:
+                    actualAttributes[u"xlmns"] = uri
+                namespacesForScope = self._namespaces.get(self._scope())
+                if namespacesForScope == None:
+                    namespacesForScope = []
+                    self._namespaces[self._scope()] = namespacesForScope
+                assert namespaceName not in [existingName for existingName, _ in namespacesForScope]
+                namespacesForScope.append((namespaceName, uri))
+                self._namespaces[namespaceName] = uri
+        else:
+            if self._namespacesToAdd:
+                namespaceNames = ", ".join([name for name, _ in self._namespacesToAdd])
+                raise XmlError(u"namespaces must be added before startTag(): %s" % namespaceNames)
 
         # Convert attributes to unicode.
         for qualifiedAttributeName, attributeValue in attributes.items():
@@ -586,11 +617,12 @@ class XmlWriter(object):
 
         Try to end another tag without any left:
 
-            >>> xml.endTag("xml")
+            >>> xml.endTag()
             Traceback (most recent call last):
                 ...
             XmlError: tag stack must not be empty
         """
+        scopeToRemove = self._scope()
         try:
             (namespace, name) = self._elementStack.pop()
         except IndexError:
@@ -602,6 +634,8 @@ class XmlWriter(object):
             if actualQualifiedName != expectedQualifiedName:
                 self._elementStack.append((namespace, name))
                 raise XmlError(u"tag name must be %s but is %s" % (uniExpectedQualifiedName, actualQualifiedName))
+        if scopeToRemove in self._namespaces:
+            del self._namespaces[scopeToRemove]
         self._writeTag(namespace, name, XmlWriter._CLOSE_AT_START)
 
     def tag(self, qualifiedName, attributes={}):

@@ -79,6 +79,28 @@ class XmlWriterTest(unittest.TestCase):
         self.assertRaises(loxun.XmlError, xml.comment, "", embedInBlanks=False)
         xml.close()
         self._assertXmlTextEqual(xml, [])
+        
+    def testScopedNamespace(self):
+        xml = _createXmlStringIoWriter()
+        xml.addNamespace("na", "ua")
+        xml.startTag("na:ta")
+        xml.addNamespace("nb1", "ub1")
+        xml.addNamespace("nb2", "ub2")
+        xml.startTag("nb1:tb")
+        xml.endTag()
+        xml.startTag("na:taa")
+        xml.tag("na:tab")
+        xml.endTag()
+        xml.endTag()
+        self._assertXmlTextEqual(xml, [
+            "<na:ta xlmns:na=\"ua\">",
+            "  <nb1:tb xlmns:nb1=\"ub1\" xlmns:nb2=\"ub2\">",
+            "  </nb1:tb>",
+            "  <na:taa>",
+            "    <na:tab />",
+            "  </na:taa>",
+            "</na:ta>"
+        ])
 
 def createTestSuite():
     """
