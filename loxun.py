@@ -213,14 +213,14 @@ Version 0.1, 15-May-2010
 
 # Developer cheat sheet
 #
-# Buid release:
+# Build release:
 # > python setup.py sdist --formats=zip
 #
 # Upload release to PyPI:
 # > python setup.py sdist --formats=zip upload
 #
 # Tag a release in the repository:
-# > svn copy -m "Added tag for version 0.x." file:///Users/agi/Repositories/huxml/trunk file:///Users/agi/Repositories/huxml/tags/0.x
+# > svn copy -m "Added tag for version 0.x." file:///Users/${USER}/Repositories/huxml/trunk file:///Users/${USER}/Repositories/huxml/tags/0.x
 import collections
 import os
 import xml.sax.saxutils
@@ -241,7 +241,7 @@ def _quoted(value):
 
 def _validateNotEmpty(name, value):
     """
-    Validate that `value` is not empty and raise `XmlError` in case it is.
+    Validate that ``value`` is not empty and raise `XmlError` in case it is.
     """
     assert name
     if not value:
@@ -249,7 +249,7 @@ def _validateNotEmpty(name, value):
 
 def _validateNotNone(name, value):
     """
-    Validate that `value` is not `None` and raise `XmlError` in case it is.
+    Validate that ``value`` is not ``None`` and raise `XmlError` in case it is.
     """
     assert name
     if value is None:
@@ -257,7 +257,7 @@ def _validateNotNone(name, value):
 
 def _validateNotNoneOrEmpty(name, value):
     """
-    Validate that `value` is not empty or `None` and raise `XmlError` in case it is.
+    Validate that ``value`` is not empty or ``None`` and raise `XmlError` in case it is.
     """
     _validateNotNone(name, value)
     _validateNotEmpty(name, value)
@@ -268,7 +268,7 @@ def _assertIsUnicode(name, value):
 
 def _splitPossiblyQualifiedName(name, value):
     """
-    A pair `(namespace, name)` derived from `qualifiedName`.
+    A pair ``(namespace, name)`` derived from ``name``.
 
     A fully qualified name:
 
@@ -334,29 +334,29 @@ class XmlWriter(object):
     
     def __init__(self, output, pretty=True, encoding=u"utf-8", errors=u"strict", prolog=True, version=u"1.0"):
         """
-        Initialize `XmlWriter` writing to `output`.
+        Initialize ``XmlWriter`` writing to ``output``.
         
-        The `output` can be anything that has a `write(data)` method,
-        typically a filelike object. The writer accesses the `output` as
+        The ``output`` can be anything that has a ``write(data)`` method,
+        typically a filelike object. The writer accesses the ``output`` as
         stream, so it does not have to support any methods for random
-        access like `seek()`.
+        access like ``seek()``.
 
-        Set `pretty` to `False` if you do not want to the writer to pretty
+        Set ``pretty`` to ``False`` if you do not want to the writer to pretty
         print. Keep in mind though that this results in the whole output being
         a single line unless you use `newline()` or write text with newline
         characters in it.
         
-        Set `encoding` to the name of the preferred output encoding.
+        Set ``encoding`` to the name of the preferred output encoding.
         
-        Set `errors` to one of the value possible value for
+        Set ``errors`` to one of the value possible value for
         ``unicode(..., error=...)`` if you do not want the output to fail with
         a `UnicodeError` in case a character cannot be encoded.
         
-        Set `prolog` to `False` if you do not want the writer to emit an XML
-        prolog processing instruction (like
+        Set ``prolog`` to ``False`` if you do not want the writer to emit an
+        XML prolog processing instruction (like
         ``<?xml version="1.0" encoding="utf-8"?>``).
         
-        Set `version` to the value the ``version`` attribute in the XML prolog
+        Set ``version`` to the value the ``version`` attribute in the XML prolog
         should have.
         """
         assert output is not None
@@ -383,12 +383,12 @@ class XmlWriter(object):
 
     @property
     def isPretty(self):
-        """Pretty print the output?"""
+        """Pretty print writes to the ``output``?"""
         return self._pretty
 
     @property
     def encoding(self):
-        """The encoding used when writing to the `output`."""
+        """The encoding used when writing to the ``output``."""
         return self._encoding
 
     @property
@@ -403,8 +403,8 @@ class XmlWriter(object):
 
     def _unicoded(self, text):
         """
-        Same value as `text` but converted to unicode in case `text` is a string.
-        `None` remains `None`.
+        Same value as ``text`` but converted to unicode in case ``text`` is a
+        string. ``None`` remains ``None``.
         """
         if text is None:
             result = None
@@ -424,7 +424,7 @@ class XmlWriter(object):
 
     def _validateIsOpen(self):
         if not self._isOpen:
-            raise XmlError("operation must be performed before writer is closed")
+            raise XmlError(u"operation must be performed before writer is closed")
 
     def _validateNamespaceItem(self, itemName, namespace, qualifiedName):
         if namespace:
@@ -460,7 +460,7 @@ class XmlWriter(object):
     def addNamespace(self, name, uri):
         """
         Add namespace to the next element, added a proper ``xlmns`` to the
-        next tag that that is written using ``startTag`` or ``tag``.
+        next tag that that is written using `startTag()` or `tag()`.
         """
         _validateNotNoneOrEmpty("name", name)
         _validateNotNoneOrEmpty("uri", uri)
@@ -525,19 +525,16 @@ class XmlWriter(object):
 
     def startTag(self, qualifiedName, attributes={}):
         """
-        Start tag with name `qualifiedName`, optionally using a namespace
-        prefix separated with a colon (:) and `attributes`.
+        Start tag with name ``qualifiedName``, optionally using a namespace
+        prefix separated with a colon (:) and ``attributes``.
 
         Example names are "img" and "xhtml:img" (assuming the namespace prefix
         "xtml" has been added before using `addNamespace()`).
 
         Attributes are a dictionary containing the attribute name and value, for
-        example:
+        example::
 
-        {
-            "src": "../some.png",
-            "xhtml:alt": "some image"
-        }
+            {"src": "../some.png", "xhtml:alt": "some image"}
         """
         uniQualifiedName = self._unicoded(qualifiedName)
         namespace, name = _splitPossiblyQualifiedName(u"tag name", uniQualifiedName)
@@ -546,8 +543,8 @@ class XmlWriter(object):
 
     def endTag(self, expectedQualifiedName=None):
         """
-        End tag that has been started before using `startTag`,
-        optionally checking that the name matches `expectedQualifiedName`.
+        End tag that has been started before using `startTag()`,
+        optionally checking that the name matches ``expectedQualifiedName``.
 
         As example, consider the following writer with a namespace:
 
@@ -556,33 +553,39 @@ class XmlWriter(object):
             >>> xml = XmlWriter(out)
             >>> xml.addNamespace("xhtml", "http://www.w3.org/1999/xhtml")
 
-            Now start a couple of elements:
+        Now start a couple of elements:
 
             >>> xml.startTag("html")
-            >>> xml.startTag("head")
             >>> xml.startTag("xhtml:body")
 
-            Try to end a mistyped tag:
+        Try to end a mistyped tag:
 
             >>> xml.endTag("xhtml:doby")
             Traceback (most recent call last):
                 ...
             XmlError: tag name must be xhtml:doby but is xhtml:body
 
-            Try again properly:
+        Try again properly:
 
             >>> xml.endTag("xhtml:body")
 
-            End an tag without an expected name:
-
-            >>> xml.endTag()
-
-            Try to end another mistyped tag, this time without namespace:
+        Try to end another mistyped tag, this time without namespace:
 
             >>> xml.endTag("xml")
             Traceback (most recent call last):
                 ...
             XmlError: tag name must be xml but is html
+
+        End the tag properly, this time without an expected name:
+
+            >>> xml.endTag()
+
+        Try to end another tag without any left:
+
+            >>> xml.endTag("xml")
+            Traceback (most recent call last):
+                ...
+            XmlError: tag stack must not be empty
         """
         try:
             (namespace, name) = self._elementStack.pop()
@@ -604,7 +607,7 @@ class XmlWriter(object):
 
     def text(self, text):
         """
-        Write `text` using escape sequences if needed.
+        Write ``text`` using escape sequences if needed.
 
         Using a writer like
 
@@ -628,7 +631,7 @@ class XmlWriter(object):
 
     def comment(self, text, embedInBlanks=True):
         """
-        Add a comment to the output.
+        Write an XML comment.
         
         As example set up a writer:
 
@@ -763,7 +766,7 @@ class XmlWriter(object):
         
     def raw(self, text):
         """
-        Write raw `text` without escaping, validation and pretty printing.
+        Write raw ``text`` without escaping, validation and pretty printing.
 
         Using a writer like
 
@@ -800,15 +803,16 @@ class XmlWriter(object):
             >>> out = StringIO()
             >>> xml = XmlWriter(out)
 
-        you can write an tag without closing it:
+        you can write a tag without closing it:
 
             >>> xml.startTag("some")
 
         However, once you try to close the writer, you get:
+
             >>> xml.close()
             Traceback (most recent call last):
                 ...
-            XmlError: elements must end: </some>
+            XmlError: missing end tags must be added: </some>
         """
         remainingElements = ""
         while self._elementStack:
@@ -817,7 +821,7 @@ class XmlWriter(object):
             namespace, name = self._elementStack.pop()
             remainingElements += u"</%s>" % self._elementName(name, namespace)
         if remainingElements:
-            raise XmlError(u"elements must end: %s" % remainingElements)
+            raise XmlError(u"missing end tags must be added: %s" % remainingElements)
 
 if __name__ == "__main__":
     import doctest

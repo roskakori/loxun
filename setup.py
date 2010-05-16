@@ -19,9 +19,39 @@ To create the installer archive, run::
 #
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+import errno
+import os.path
+import subprocess
 from distutils.core import setup
+from distutils.cmd import Command 
 
 import loxun
+
+def _makeFolders(path):
+    try:
+        os.makedirs(path)
+    except OSError, error:
+        if error.errno != errno.EEXIST:
+            raise
+
+class _ApiCommand(Command):
+    """
+    Command for setuptools to build API documentation.
+    """
+    description = "build API documentation"
+    user_options = []
+
+    def initialize_options(self):
+        pass
+    
+    def finalize_options(self):
+        pass
+
+    def run(self):
+        _makeFolders(os.path.join("build", "site", "api"))
+        epydocCall = ["epydoc", "--config", "epydoc.config"]
+        print " ".join(epydocCall)
+        subprocess.check_call(epydocCall)
 
 setup(
     name="loxun",
@@ -48,4 +78,5 @@ setup(
         "Topic :: Software Development :: Libraries",
         "Topic :: Text Processing :: Markup :: XML",
     ],
+    cmdclass={"api": _ApiCommand}
 )
