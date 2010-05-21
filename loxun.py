@@ -151,7 +151,7 @@ wise best way is to use Unicode strings. For example:
     >>> from StringIO import StringIO
     >>> out = StringIO()
     >>> xml = XmlWriter(out, prolog=False)
-    >>> xml.text(u"The price is \u20ac 100") # Unicode of Euro symbol
+    >>> xml.text(u"The price is \\u20ac 100") # Unicode of Euro symbol
     >>> out.getvalue().rstrip("\\r\\n")
     'The price is \\xe2\\x82\\xac 100'
 
@@ -172,7 +172,7 @@ not work out as soon as you use a character outside the ASCII range:
     >>> from StringIO import StringIO
     >>> out = StringIO()
     >>> xml = XmlWriter(out, prolog=False)
-    >>> xml.text("The price is \xa4 100") # ISO-8859-15 code of Euro symbol
+    >>> xml.text("The price is \\xa4 100") # ISO-8859-15 code of Euro symbol
     Traceback (most recent call last):
         ...
     UnicodeDecodeError: 'ascii' codec can't decode byte 0xa4 in position 13: ordinal not in range(128)
@@ -186,9 +186,14 @@ the the ``sourceEncoding``:
 
 Now everything works out again:
 
-    >>> xml.text("The price is \xa4 100") # ISO-8859-15 code of Euro symbol
+    >>> xml.text("The price is \\xa4 100") # ISO-8859-15 code of Euro symbol
     >>> out.getvalue().rstrip("\\r\\n")
     'The price is \\xe2\\x82\\xac 100'
+
+Of course in practice you will not mess around with hex codes to pass your
+texts. Instead you just specify the source encoding using the mechanisms
+described in PEP 263,
+`Defining Python Source Code Encodings <http://www.python.org/dev/peps/pep-0263/>`_:
 
 Changing the XML prolog
 -----------------------
