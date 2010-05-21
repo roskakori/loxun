@@ -1,3 +1,4 @@
+# -*- coding: iso-8859-15 -*-
 """
 loxun is a Python module to write large output in XML using Unicode and
 namespaces. Of course you can also use it for small XML output with plain 8
@@ -141,6 +142,72 @@ As a result, tag names are now prefixed with "xhtml:":
       </xhtml:body>
     </xhtml:html>
 
+Working with non ASCII characters
+---------------------------------
+
+Sometimes you want to use characters outside the ASCII range, for example
+German Umlauts, the Euro symbol or Japanese Kanji. The easiest and performance
+wise best way is to use Unicode strings. For example:
+
+    >>> from StringIO import StringIO
+    >>> out = StringIO()
+    >>> xml = XmlWriter(out, prolog=False)
+    >>> xml.text(u"The price is \u20ac 100") # Unicode of Euro symbol
+    >>> out.getvalue().rstrip("\\r\\n")
+    'The price is \\xe2\\x82\\xac 100'
+
+Notice the "u" before the string passed to `text()`, it declares the string
+to be a unicode string that can hold any character, even those that are
+beyond the 8 bit range.
+
+Also notice that in the output the Euro symbol looks very different from the
+input. This is because the output encoding is UTF-8 (the default), which
+has the advantage of keeping all ASCII characters the same and turning any
+characters with a code or 128 or more into a sequence of 8 bit bytes that
+can easily fit into an output stream to a binary file or ``StringIO``.
+
+If you have to stick to classic 8 bit string parameters, loxun attempts to
+convert them to unicode. By default it assumes ASCII encoding, which does
+not work out as soon as you use a character outside the ASCII range:
+
+    >>> from StringIO import StringIO
+    >>> out = StringIO()
+    >>> xml = XmlWriter(out, prolog=False)
+    >>> xml.text("The price is \xa4 100") # ISO-8859-15 code of Euro symbol
+    Traceback (most recent call last):
+        ...
+    UnicodeDecodeError: 'ascii' codec can't decode byte 0xa4 in position 13: ordinal not in range(128)
+
+In this case you have to tell the writer the encoding you use by specifying
+the the ``sourceEncoding``:
+
+    >>> from StringIO import StringIO
+    >>> out = StringIO()
+    >>> xml = XmlWriter(out, prolog=False, sourceEncoding="iso-8859-15")
+
+Now everything works out again:
+
+    >>> xml.text("The price is \xa4 100") # ISO-8859-15 code of Euro symbol
+    >>> out.getvalue().rstrip("\\r\\n")
+    'The price is \\xe2\\x82\\xac 100'
+
+Of course in practice you will not mess around with hex codes to pass your
+texts. Instead you just specify the source encoding using the mechanisms
+described in PEP 263,
+`Defining Python Source Code Encodings <http://www.python.org/dev/peps/pep-0263/>`_:
+
+    >>> # -*- coding: iso-8859-15 -*-
+    >>> #             ^^^^^^^^^^^ Specify the encoding used by your source code editor.
+    >>> from StringIO import StringIO
+    >>> out = StringIO()
+    >>> xml = XmlWriter(out, prolog=False, sourceEncoding="iso-8859-15")
+    >>> #      Use the same encoding for the writer        ^^^^^^^^^^^ 
+    >>> xml.text("The price is ¤ 100")
+    >>> #                     ^^^ Use your keyboard instead of hex codes
+    >>> out.getvalue().rstrip("\\r\\n")
+    'The price is \\xe2\\x82\\xac 100'
+
+
 Changing the XML prolog
 -----------------------
 
@@ -171,9 +238,11 @@ To completely omit the prolog, set the parameter ``prolog=False``:
 Version history
 ===============
 
-Version 0.4, xx-May-2010
+Version 0.4, 21-May-2010
 
-* ...
+* Added option ``sourceEncoding`` to simplify processing of classic strings.
+  The manual section "Working with non ASCII characters" explains how to use
+  it.
 
 Version 0.3, 17-May-2010
 ------------------------
@@ -342,7 +411,7 @@ class XmlWriter(object):
     _CLOSE_AT_START = u"start"
     _CLOSE_AT_END = u"end"
     
-    def __init__(self, output, pretty=True, encoding=u"utf-8", errors=u"strict", prolog=True, version=u"1.0"):
+    def __init__(self, output, pretty=True, encoding=u"utf-8", errors=u"strict", prolog=True, version=u"1.0", sourceEncoding="ascii"):
         """
         Initialize ``XmlWriter`` writing to ``output``.
         
@@ -371,10 +440,14 @@ class XmlWriter(object):
         
         Set ``version`` to the value the version attribute in the XML prolog
         should have.
+        
+        Set ``sourceEncoding`` to the name of the encoding that plain 8 bit
+        strings passed as parameters use.
         """
         assert output is not None
         assert encoding
         assert errors
+        assert sourceEncoding
         _validateNotNoneOrEmpty("version", version)
         self._output = output
         self._pretty = pretty
@@ -389,6 +462,7 @@ class XmlWriter(object):
         self._namespacesToAdd = collections.deque()
         self._isOpen = True
         self._contentHasBeenWritten = False
+        self._sourceEncoding = sourceEncoding
         if prolog:
             self.processingInstruction(u"xml", "version=%s encoding=%s" % ( \
                 _quoted(self._unicoded(version)),
@@ -428,7 +502,7 @@ class XmlWriter(object):
         elif isinstance(text, unicode):
             result = text
         else:
-            result = unicode(text, "ascii")
+            result = unicode(text, self._sourceEncoding)
         return result
 
     def _elementName(self, name, namespace):

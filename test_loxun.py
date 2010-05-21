@@ -1,3 +1,4 @@
+# -*- coding: iso-8859-15 -*-
 """
 Tests for loxun.
 """
@@ -39,6 +40,17 @@ class XmlWriterTest(unittest.TestCase):
         assert writer
         self.assertEqual(_getXmlText(writer), actual)
     
+    def testUnicodeEuro(self):
+        xml = _createXmlStringIoWriter()
+        xml.text(u"\u20ac")
+        self._assertXmlTextEqual(xml, ["\xe2\x82\xac"])
+        
+    def testIsoEuro(self):
+        out = StringIO()
+        xml = loxun.XmlWriter(out, sourceEncoding="iso-8859-15", prolog=False)
+        xml.text("\xa4")
+        self._assertXmlTextEqual(xml, ["\xe2\x82\xac"])
+        
     def testComment(self):
         xml = _createXmlStringIoWriter()
         xml.comment("some comment")
