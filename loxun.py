@@ -1,4 +1,3 @@
-# -*- coding: iso-8859-15 -*-
 """
 loxun is a Python module to write large output in XML using Unicode and
 namespaces. Of course you can also use it for small XML output with plain 8
@@ -190,23 +189,6 @@ Now everything works out again:
     >>> xml.text("The price is \xa4 100") # ISO-8859-15 code of Euro symbol
     >>> out.getvalue().rstrip("\\r\\n")
     'The price is \\xe2\\x82\\xac 100'
-
-Of course in practice you will not mess around with hex codes to pass your
-texts. Instead you just specify the source encoding using the mechanisms
-described in PEP 263,
-`Defining Python Source Code Encodings <http://www.python.org/dev/peps/pep-0263/>`_:
-
-    >>> # -*- coding: iso-8859-15 -*-
-    >>> #             ^^^^^^^^^^^ Specify the encoding used by your source code editor.
-    >>> from StringIO import StringIO
-    >>> out = StringIO()
-    >>> xml = XmlWriter(out, prolog=False, sourceEncoding="iso-8859-15")
-    >>> #      Use the same encoding for the writer        ^^^^^^^^^^^ 
-    >>> xml.text("The price is ¤ 100")
-    >>> #                     ^^^ Use your keyboard instead of hex codes
-    >>> out.getvalue().rstrip("\\r\\n")
-    'The price is \\xe2\\x82\\xac 100'
-
 
 Changing the XML prolog
 -----------------------
