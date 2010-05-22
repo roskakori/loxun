@@ -111,6 +111,9 @@ And this is what we get:
       </body>
     </html>
 
+Using namespaces
+----------------
+
 Now the same thing but with a namespace. First create the prolog
 and header like above:
 
@@ -225,7 +228,13 @@ To completely omit the prolog, set the parameter ``prolog=False``:
 Version history
 ===============
 
+Version 0.5, xx-May-2010
+------------------------
+
+* ...
+
 Version 0.4, 21-May-2010
+------------------------
 
 * Added option ``sourceEncoding`` to simplify processing of classic strings.
   The manual section "Working with non ASCII characters" explains how to use
@@ -292,7 +301,7 @@ import os
 import xml.sax.saxutils
 from StringIO import StringIO
 
-__version__ = "0.4"
+__version__ = "0.5"
 VERSION_REV, VERSION_DATE = "$Id$".split()[2:4]
 
 class XmlError(Exception):
