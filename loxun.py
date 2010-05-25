@@ -228,6 +228,12 @@ To completely omit the prolog, set the parameter ``prolog=False``:
 Version history
 ===============
 
+
+Version 0.6, xx-May-2010
+------------------------
+
+* ...
+
 Version 0.5, 25-May-2010
 ------------------------
 
@@ -303,7 +309,7 @@ import os
 import xml.sax.saxutils
 from StringIO import StringIO
 
-__version__ = "0.5"
+__version__ = "0.6"
 VERSION_REV, VERSION_DATE = "$Id$".split()[2:4]
 
 class XmlError(Exception):
