@@ -50,7 +50,7 @@ And the result is:
 
     >>> print out.getvalue().rstrip("\\r\\n")
     <?xml version="1.0" encoding="utf-8"?>
-    <xhtml:html xlmns:xhtml="http://www.w3.org/1999/xhtml">
+    <xhtml:html xmlns:xhtml="http://www.w3.org/1999/xhtml">
       <xhtml:body>
         Hello world!
         <xhtml:img alt=":-)" src="smile.png" />
@@ -138,7 +138,7 @@ As a result, tag names are now prefixed with "xhtml:":
 
     >>> print out.getvalue().rstrip("\\r\\n")
     <?xml version="1.0" encoding="utf-8"?>
-    <xhtml:html xlmns:xhtml="http://www.w3.org/1999/xhtml">
+    <xhtml:html xmlns:xhtml="http://www.w3.org/1999/xhtml">
       <xhtml:body>
         Hello world!
       </xhtml:body>
@@ -228,10 +228,10 @@ To completely omit the prolog, set the parameter ``prolog=False``:
 Version history
 ===============
 
-Version 0.5, xx-May-2010
+Version 0.5, 25-May-2010
 ------------------------
 
-* ...
+* Fixed typo in namespace attribute name.
 
 Version 0.4, 21-May-2010
 ------------------------
@@ -554,7 +554,7 @@ class XmlWriter(object):
 
     def addNamespace(self, name, uri):
         """
-        Add namespace to the following elements by adding a ``xlmns``
+        Add namespace to the following elements by adding a ``xmlns``
         attribute to the next tag that is written using `startTag()` or `tag()`.
         """
         # TODO: Validate that name is NCName.
@@ -580,16 +580,16 @@ class XmlWriter(object):
 
         actualAttributes = {}
 
-        # TODO: Validate that no "xlmns" attributes are specified by hand.
+        # TODO: Validate that no "xmlns" attributes are specified by hand.
 
         # Process new namespaces to add.
         if close == XmlWriter._CLOSE_NONE:
             while self._namespacesToAdd:
                 namespaceName, uri = self._namespacesToAdd.pop()
                 if namespaceName:
-                    actualAttributes[u"xlmns:%s" % namespaceName] = uri
+                    actualAttributes[u"xmlns:%s" % namespaceName] = uri
                 else:
-                    actualAttributes[u"xlmns"] = uri
+                    actualAttributes[u"xmlns"] = uri
                 namespacesForScope = self._namespaces.get(self._scope())
                 if namespacesForScope == None:
                     namespacesForScope = []

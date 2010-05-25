@@ -105,8 +105,8 @@ class XmlWriterTest(unittest.TestCase):
         xml.endTag()
         xml.endTag()
         self._assertXmlTextEqual(xml, [
-            "<na:ta xlmns:na=\"ua\">",
-            "  <nb1:tb xlmns:nb1=\"ub1\" xlmns:nb2=\"ub2\">",
+            "<na:ta xmlns:na=\"ua\">",
+            "  <nb1:tb xmlns:nb1=\"ub1\" xmlns:nb2=\"ub2\">",
             "  </nb1:tb>",
             "  <na:taa>",
             "    <na:tab />",
