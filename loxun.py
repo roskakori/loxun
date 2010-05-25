@@ -232,6 +232,8 @@ Version 0.5, 25-May-2010
 ------------------------
 
 * Fixed typo in namespace attribute name.
+* Fixed adding of namespaces before calls to ``tag()`` which resulted in an
+  ``XmlError``.
 
 Version 0.4, 21-May-2010
 ------------------------
@@ -583,7 +585,7 @@ class XmlWriter(object):
         # TODO: Validate that no "xmlns" attributes are specified by hand.
 
         # Process new namespaces to add.
-        if close == XmlWriter._CLOSE_NONE:
+        if close in [XmlWriter._CLOSE_NONE, XmlWriter._CLOSE_AT_END]:
             while self._namespacesToAdd:
                 namespaceName, uri = self._namespacesToAdd.pop()
                 if namespaceName:
@@ -600,7 +602,7 @@ class XmlWriter(object):
         else:
             if self._namespacesToAdd:
                 namespaceNames = ", ".join([name for name, _ in self._namespacesToAdd])
-                raise XmlError(u"namespaces must be added before startTag(): %s" % namespaceNames)
+                raise XmlError(u"namespaces must be added before startTag() or tag(): %s" % namespaceNames)
 
         # Convert attributes to unicode.
         for qualifiedAttributeName, attributeValue in attributes.items():

@@ -91,7 +91,14 @@ class XmlWriterTest(unittest.TestCase):
         self.assertRaises(loxun.XmlError, xml.comment, "", embedInBlanks=False)
         xml.close()
         self._assertXmlTextEqual(xml, [])
-        
+
+    def testNamespacedTag(self):
+        xml = _createXmlStringIoWriter()
+        xml.addNamespace("x", "http://xxx/");
+        xml.tag("x:a")
+        xml.close()
+        self._assertXmlTextEqual(xml, ["<x:a xmlns:x=\"http://xxx/\" />"])
+ 
     def testScopedNamespace(self):
         xml = _createXmlStringIoWriter()
         xml.addNamespace("na", "ua")
