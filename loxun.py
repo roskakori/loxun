@@ -27,12 +27,15 @@ loxun's features are:
 * **open source**: distributed under the GNU Lesser General Public License 3
   or later.
 
-Here is a very basic example. First you have create an output stream. In many
-cases this would be a file, but for the sake of simplicity we use a
-``StringIO`` here: 
+Here is a very basic example. First you have to create an output stream. In
+many cases this would be a file, but for the sake of simplicity we use a
+``StringIO`` here:
 
     >>> from StringIO import StringIO
     >>> out = StringIO()
+
+Then you can create an `XmlWriter` to write to this output:
+
     >>> xml = XmlWriter(out)
 
 Now write the content:
@@ -158,8 +161,8 @@ wise best way is to use Unicode strings. For example:
     >>> out.getvalue().rstrip("\\r\\n")
     'The price is \\xe2\\x82\\xac 100'
 
-Notice the "u" before the string passed to `text()`, it declares the string
-to be a unicode string that can hold any character, even those that are
+Notice the "u" before the string passed to `XmlWriter.text()`, it declares the
+string to be a unicode string that can hold any character, even those that are
 beyond the 8 bit range.
 
 Also notice that in the output the Euro symbol looks very different from the
@@ -232,14 +235,14 @@ Version history
 Version 0.6, xx-May-2010
 ------------------------
 
-* ...
+* TODO: describe changes.
 
 Version 0.5, 25-May-2010
 ------------------------
 
 * Fixed typo in namespace attribute name.
-* Fixed adding of namespaces before calls to ``tag()`` which resulted in an
-  ``XmlError``.
+* Fixed adding of namespaces before calls to `XmlWriter.tag()` which resulted
+  in an `XmlError`.
 
 Version 0.4, 21-May-2010
 ------------------------
@@ -251,24 +254,22 @@ Version 0.4, 21-May-2010
 Version 0.3, 17-May-2010
 ------------------------
 
-* Added scoped namespaces which are removed automatically by ``endTag()``.
-
+* Added scoped namespaces which are removed automatically by
+  `XmlWriter.endTag()`.
 * Changed ``text()`` to normalize newlines and white space if pretty printing
   is enabled.
-
-* Moved writing of XML prolog to the constructor and removed ``prolog()``. To
-  omit the prolog, specify ``prolog=False`` when creating the ``XmlWriter``.
-  If you later want to write the prolog yourself, use
-  ``processingInstruction()``.
-
+* Moved writing of XML prolog to the constructor and removed
+  ``XmlWriter.prolog()``. To omit the prolog, specify ``prolog=False`` when
+  creating the `XmlWriter`. If you later want to write the prolog yourself,
+  use `XmlWriter.processingInstruction()`.
 * Renamed ``*Element()`` to ``*Tag`` because they really only write tags, not
   whole elements.
 
 Version 0.2, 16-May-2010
 ------------------------
 
-* Added ``comment()``, ``cdata()`` and ``processingInstruction()`` to write
-  these specific XML constructs.
+* Added `XmlWriter.comment()`, `XmlWriter.cdata()` and
+  `XmlWriter.processingInstruction()` to write these specific XML constructs.
 * Added indentation and automatic newline to text if pretty printing is
   enabled.
 * Removed newline from prolog in case pretty printing is disabled.
@@ -414,37 +415,37 @@ class XmlWriter(object):
     _CLOSE_NONE = u"none"
     _CLOSE_AT_START = u"start"
     _CLOSE_AT_END = u"end"
-    
+
     def __init__(self, output, pretty=True, encoding=u"utf-8", errors=u"strict", prolog=True, version=u"1.0", sourceEncoding="ascii"):
         """
         Initialize ``XmlWriter`` writing to ``output``.
-        
+
         The ``output`` can be anything that has a ``write(data)`` method,
         typically a filelike object. The writer accesses the ``output`` as
         stream, so it does not have to support any methods for random
         access like ``seek()``.
-        
+
         In case you write to a file, use ``"wb"`` as ``mode`` for ``open()``
         to prevent messed up newlines.
-        
+
         Set ``pretty`` to ``False`` if you do not want to the writer to pretty
         print. Keep in mind though that this results in the whole output being
         a single line unless you use `newline()` or write text with newline
         characters in it.
-        
+
         Set ``encoding`` to the name of the preferred output encoding.
-        
+
         Set ``errors`` to one of the value possible value for
         ``unicode(..., error=...)`` if you do not want the output to fail with
         a `UnicodeError` in case a character cannot be encoded.
-        
+
         Set ``prolog`` to ``False`` if you do not want the writer to emit an
         XML prolog processing instruction (like
         ``<?xml version="1.0" encoding="utf-8"?>``).
-        
+
         Set ``version`` to the value the version attribute in the XML prolog
         should have.
-        
+
         Set ``sourceEncoding`` to the name of the encoding that plain 8 bit
         strings passed as parameters use.
         """
@@ -781,13 +782,13 @@ class XmlWriter(object):
     def comment(self, text, embedInBlanks=True):
         """
         Write an XML comment.
-        
+
         As example set up a writer:
 
             >>> from StringIO import StringIO
             >>> out = StringIO()
             >>> xml = XmlWriter(out, prolog=False)
-            
+
         Now add the comment
 
             >>> xml.comment("some comment")
@@ -799,11 +800,11 @@ class XmlWriter(object):
 
         A comment can spawn multiple lines. If pretty is enabled, the lines
         will be indented. Again, first set up a writer:
-        
+
             >>> from StringIO import StringIO
             >>> out = StringIO()
             >>> xml = XmlWriter(out, prolog=False)
-            
+
         Then add the comment
 
             >>> xml.comment("some comment\\nspawning mutiple\\nlines")
@@ -851,13 +852,13 @@ class XmlWriter(object):
     def cdata(self, text):
         """
         Write a CDATA section.
-        
+
         As example set up a writer:
 
             >>> from StringIO import StringIO
             >>> out = StringIO()
             >>> xml = XmlWriter(out, prolog=False)
-            
+
         Now add the CDATA section:
 
             >>> xml.cdata("some data\\nlines\\n<tag>&&&")
@@ -874,13 +875,13 @@ class XmlWriter(object):
     def processingInstruction(self, target, text):
         """
         Write a processing instruction.
-        
+
         As example set up a writer:
 
             >>> from StringIO import StringIO
             >>> out = StringIO()
             >>> xml = XmlWriter(out, prolog=False)
-            
+
         Now add the processing instruction:
 
             >>> xml.processingInstruction("xsl-stylesheet", "href=\\"some.xsl\\" type=\\"text/xml\\"")
@@ -912,7 +913,7 @@ class XmlWriter(object):
         self._write(uniText)
         self._write(end)
         self._writePrettyNewline()
-        
+
     def raw(self, text):
         """
         Write raw ``text`` without escaping, validation and pretty printing.
@@ -924,7 +925,7 @@ class XmlWriter(object):
             >>> xml = XmlWriter(out, prolog=False)
 
         you can use ``raw`` for good and add for exmaple a doctype declaration:
-        
+
             >>> xml.raw("<!DOCTYPE html PUBLIC \\"-//W3C//DTD XHTML 1.0 Transitional//EN\\" \\"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\\">")
             >>> print out.getvalue().rstrip("\\r\\n")
             <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
