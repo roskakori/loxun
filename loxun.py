@@ -115,7 +115,7 @@ And this is what we get:
     </html>
 
 Using namespaces
-----------------
+================
 
 Now the same thing but with a namespace. First create the prolog
 and header like above:
@@ -148,7 +148,7 @@ As a result, tag names are now prefixed with "xhtml:":
     </xhtml:html>
 
 Working with non ASCII characters
----------------------------------
+=================================
 
 Sometimes you want to use characters outside the ASCII range, for example
 German Umlauts, the Euro symbol or Japanese Kanji. The easiest and performance
@@ -168,7 +168,7 @@ beyond the 8 bit range.
 Also notice that in the output the Euro symbol looks very different from the
 input. This is because the output encoding is UTF-8 (the default), which
 has the advantage of keeping all ASCII characters the same and turning any
-characters with a code or 128 or more into a sequence of 8 bit bytes that
+characters with a code of 128 or more into a sequence of 8 bit bytes that
 can easily fit into an output stream to a binary file or ``StringIO``.
 
 If you have to stick to classic 8 bit string parameters, loxun attempts to
@@ -202,7 +202,7 @@ described in PEP 263,
 `Defining Python Source Code Encodings <http://www.python.org/dev/peps/pep-0263/>`_:
 
 Changing the XML prolog
------------------------
+=======================
 
 When you create a writer, it automatically write an XML prolog
 processing instruction to the output. This is what the default prolog
@@ -235,7 +235,7 @@ Version history
 Version 0.6, xx-May-2010
 ------------------------
 
-* TODO: describe changes.
+* Cleaned up documentation.
 
 Version 0.5, 25-May-2010
 ------------------------
