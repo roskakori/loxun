@@ -276,9 +276,13 @@ Version history
 ===============
 
 
-Version 0.6, xx-May-2010
+Version 0.6, 03-Jun-2010
 ------------------------
 
+* Added option ``indent`` to specify the indentation text each new line starts with.
+* Added option ``newline`` to specify how lines written should end.
+* Fixed that `XmlWriter.tag()` did not remove namespaces declared immediately
+  before it. 
 * Cleaned up documentation.
 
 Version 0.5, 25-May-2010
@@ -714,6 +718,12 @@ class XmlWriter(object):
         if self._pretty:
             self.newline()
 
+        # Process name spaces to remove
+        if close in [XmlWriter._CLOSE_AT_END, XmlWriter._CLOSE_AT_START]:
+            scopeToRemove = self._scope()
+            if scopeToRemove in self._namespaces:
+                del self._namespaces[scopeToRemove]
+
     def startTag(self, qualifiedName, attributes={}):
         """
         Start tag with name ``qualifiedName``, optionally using a namespace
@@ -778,7 +788,6 @@ class XmlWriter(object):
                 ...
             XmlError: tag stack must not be empty
         """
-        scopeToRemove = self._scope()
         try:
             (namespace, name) = self._elementStack.pop()
         except IndexError:
@@ -790,8 +799,6 @@ class XmlWriter(object):
             if actualQualifiedName != expectedQualifiedName:
                 self._elementStack.append((namespace, name))
                 raise XmlError(u"tag name must be %s but is %s" % (uniExpectedQualifiedName, actualQualifiedName))
-        if scopeToRemove in self._namespaces:
-            del self._namespaces[scopeToRemove]
         self._writeTag(namespace, name, XmlWriter._CLOSE_AT_START)
 
     def tag(self, qualifiedName, attributes={}):

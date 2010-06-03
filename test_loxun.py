@@ -119,7 +119,7 @@ class XmlWriterTest(unittest.TestCase):
         xml.tag("x:a")
         xml.close()
         self._assertXmlTextEqual(xml, ["<x:a xmlns:x=\"http://xxx/\" />"])
- 
+
     def testScopedNamespace(self):
         xml = _createXmlStringIoWriter()
         xml.addNamespace("na", "ua")
@@ -141,6 +141,14 @@ class XmlWriterTest(unittest.TestCase):
             "  </na:taa>",
             "</na:ta>"
         ])
+
+    def testBrokenScopedNamespacedTag(self):
+        xml = _createXmlStringIoWriter()
+        xml.startTag("outer")
+        xml.addNamespace("x", "http://xxx/");
+        xml.tag("x:inner")
+        self.assertRaises(loxun.XmlError, xml.startTag, "x:outer")
+ 
 
 def createTestSuite():
     """
