@@ -44,7 +44,28 @@ class XmlWriterTest(unittest.TestCase):
         xml = _createXmlStringIoWriter()
         xml.text(u"\u20ac")
         self._assertXmlTextEqual(xml, ["\xe2\x82\xac"])
-        
+
+    def testInitIndent(self):
+        out = StringIO()
+        xml = loxun.XmlWriter(out, indent="\t")
+        self.assertEquals(xml._indent, u"\t")
+        xml = loxun.XmlWriter(out, indent="    ")
+        self.assertEquals(xml._indent, u"    ")
+        try:
+            loxun.XmlWriter(out, indent="xxx")
+        except AssertionError, error:
+            self.assertEquals(str(error), "`indent` must contain only blanks or tabs but also has: u'xxx'")
+
+    def testInitNewline(self):
+        out = StringIO()
+        for newline in ["\r", "\n", "\r\n"]:
+            xml = loxun.XmlWriter(out, newline=newline)
+            self.assertEquals(xml._newline, unicode(newline, "ascii"))
+        try:
+            loxun.XmlWriter(out, newline="xxx")
+        except AssertionError, error:
+            self.assertEquals(str(error), "`newline` is u'xxx' but must be one of: [u'\\r', u'\\n', u'\\r\\n']")
+
     def testIsoEuro(self):
         out = StringIO()
         xml = loxun.XmlWriter(out, sourceEncoding="iso-8859-15", prolog=False)

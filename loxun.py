@@ -469,7 +469,7 @@ class XmlWriter(object):
     _CDATA_START = u"<![CDATA["
     _CDATA_END = u"]]>"
 
-    # Marks to start/end processing instrution.
+    # Marks to start/end processing instruction.
     _PROCESSING_START = u"<?"
     _PROCESSING_END = u"?>"
 
@@ -478,7 +478,7 @@ class XmlWriter(object):
     _CLOSE_AT_START = u"start"
     _CLOSE_AT_END = u"end"
 
-    def __init__(self, output, pretty=True, encoding=u"utf-8", errors=u"strict", prolog=True, version=u"1.0", sourceEncoding="ascii"):
+    def __init__(self, output, pretty=True, indent=u"  ", newline=os.linesep, encoding=u"utf-8", errors=u"strict", prolog=True, version=u"1.0", sourceEncoding="ascii"):
         """
         Initialize ``XmlWriter`` writing to ``output``.
 
@@ -494,6 +494,12 @@ class XmlWriter(object):
         print. Keep in mind though that this results in the whole output being
         a single line unless you use `newline()` or write text with newline
         characters in it.
+
+        Set ``indent`` to the string that shoud be used for each indentation
+        level.
+
+        Set ``newline`` to the string that should be used at the end of each
+        line.
 
         Set ``encoding`` to the name of the preferred output encoding.
 
@@ -518,10 +524,6 @@ class XmlWriter(object):
         _validateNotNoneOrEmpty("version", version)
         self._output = output
         self._pretty = pretty
-        # TODO: Add indent parameter and property.
-        # TODO: Add newline parameter.
-        self._indent = u"  "
-        self._newline = unicode(os.linesep, "ascii")
         self._encoding = self._unicoded(encoding)
         self._errors = self._unicoded(errors)
         self._namespaces = {}
@@ -530,6 +532,14 @@ class XmlWriter(object):
         self._isOpen = True
         self._contentHasBeenWritten = False
         self._sourceEncoding = sourceEncoding
+        self._indent = self._unicoded(indent)
+        indentWithoutWhiteSpace = self._indent.replace(u" ", u"").replace(u"\t", u"")
+        assert not indentWithoutWhiteSpace, \
+            "`indent` must contain only blanks or tabs but also has: %r" % indentWithoutWhiteSpace
+        self._newline = self._unicoded(newline)
+        _VALID_NEWLINES = [u"\r", u"\n", u"\r\n"]
+        assert self._newline in _VALID_NEWLINES, \
+            "`newline` is %r but must be one of: %s" % (self._newline, _VALID_NEWLINES)
         if prolog:
             self.processingInstruction(u"xml", "version=%s encoding=%s" % ( \
                 _quoted(self._unicoded(version)),
