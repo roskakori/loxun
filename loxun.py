@@ -228,6 +228,50 @@ To completely omit the prolog, set the parameter ``prolog=False``:
     >>> out.getvalue()
     ''
 
+Adding other content
+====================
+
+Apart from text and tags, XML provides a few more things you can add to
+documents. Here's an example that shows how to do it with loxun.
+
+First, create a writer:
+
+    >>> from StringIO import StringIO
+    >>> out = StringIO()
+    >>> xml = XmlWriter(out)
+
+Let's add a document type definition:
+
+    >>> xml.raw("<!DOCTYPE html PUBLIC \\"-//W3C//DTD XHTML 1.0 Strict//EN\\" SYSTEM \\"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\\">")
+    >>> xml.newline()
+    
+Notice that loxun uses the generic `XmlWriter.raw()` for that, which allows to
+add any content without validation or escaping. You can do all sorts of nasty
+things with ``raw()`` that will result in invalid XML, but this is one of its
+reasonable uses.
+
+Next, let's add a comment:
+
+    >>> xml.comment("Show case some rarely used XML constructs")
+
+Here is a processing instruction:
+
+    >>> xml.processingInstruction("xml-stylesheet", "href=\\"default.css\\" type=\\"text/css\\"")
+
+And finally a CDATA section:
+
+    >>> xml.cdata(">> this will not be parsed <<")
+
+And the result is:
+
+    >>> print out.getvalue().rstrip("\\r\\n")
+    <?xml version="1.0" encoding="utf-8"?>
+    <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" SYSTEM "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+    <!-- Show case some rarely used XML constructs -->
+    <?xml-stylesheet href="default.css" type="text/css"?>
+    <![CDATA[>> this will not be parsed <<]]>
+
+
 Version history
 ===============
 
@@ -305,6 +349,24 @@ Version 0.1, 15-May-2010
 #
 # Tag a release in the repository:
 # > svn copy -m "Added tag for version 0.x." file:///Users/${USER}/Repositories/huxml/trunk file:///Users/${USER}/Repositories/huxml/tags/0.x
+
+# Required patch for Epydoc 3.0.1 to work with docutils 0.6:
+# In epydoc/markup/restructuredtext.py, change in _SummaryExtractor.__init__():
+# Extract the first sentence.
+#  for child in node:
+#     if isinstance(child, docutils.nodes.Text):
+#         # FIXME: m = self._SUMMARY_RE.match(child.data)
+#         text = child.astext()
+#         m = self._SUMMARY_RE.match(text)
+#         if m:
+#             summary_pieces.append(docutils.nodes.Text(m.group(1)))
+#             # FIXME: other = child.data[m.end():]
+#             other = text[m.end():]
+#             if other and not other.isspace():
+#                 self.other_docs = True
+#             break
+#     summary_pieces.append(child)
+
 import collections
 import os
 import xml.sax.saxutils
