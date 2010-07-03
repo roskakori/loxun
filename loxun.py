@@ -272,13 +272,39 @@ And the result is:
     <![CDATA[>> this will not be parsed <<]]>
 
 
+Optimization
+============
+
+Loxun automatically optimized pairs of empty start/end tags. For example:
+
+    >>> out = StringIO()
+    >>> xml = XmlWriter(out)
+    >>> xml.startTag("customers")
+    >>> xml.startTag("person", {"id": "12345", "name": "Doe, John"})
+    >>> xml.endTag("person") # without optimization, this would add </person>.
+    >>> xml.endTag()
+    >>> xml.close()
+    >>> print out.getvalue().rstrip("\\r\\n")
+    <?xml version="1.0" encoding="utf-8"?>
+    <customers>
+      <person id="12345" name="Doe, John" />
+    </customers>
+
+Despite the explicit ``startTag("person")`` and matching ``endtag()``, the
+output only contains a simple ``<person ... />`` tag.
+
+
 Version history
 ===============
 
-Version 0.7, xx-Jul-2010
+Version 0.7, 03-Jul-2010
 ------------------------
 
-* xxx
+* Added optimization of matching start and end tag without any content in
+  between. For example, ``x.startTag("some"); x.endTag()`` results in
+  ``<some />`` instead of ``<some></some>``.
+* Fixed handling of unknown name spaces. They now raise an `XmlError` instead
+   of ``ValueError``. 
 
 Version 0.6, 03-Jun-2010
 ------------------------
@@ -618,7 +644,11 @@ class XmlWriter(object):
                         namespaceFound = True
                 scopeIndex -= 1
             if not namespaceFound:
-                raise XmlError(u"namespace '%s' for %s '%s' must be added before use" % (namespace, itemName, qualifiedName))
+                if namespace == "xmlns":
+                    # TODO: raise XmlError("namespace '%s' must be added using `addNamespace()`.")
+                    pass
+                else:
+                    raise XmlError(u"namespace '%s' for %s '%s' must be added before use" % (namespace, itemName, qualifiedName))
 
     def _write(self, text):
         assert text is not None
@@ -662,7 +692,7 @@ class XmlWriter(object):
             (namespacesForScope != None) and (uniName in namespacesForScope)
         )
         if namespaceExists:
-            raise ValueError(u"namespace %r must added only once for current scope but already is %r" % (uniName, uniUri))
+            raise XmlError(u"namespace %r must added only once for current scope but already is %r" % (uniName, uniUri))
         self._namespacesToAdd.append((uniName, uniUri))
 
     def _possiblyWriteTag(self, namespace, name, close, attributes={}):
@@ -715,10 +745,10 @@ class XmlWriter(object):
         else:
             qualifiedTagName = name
 
-        # TODO: if close == XmlWriter._CLOSE_NONE:
-        # TODO:   self._startTagToWrite = (namespace, name, attributes)
-        # TODO: else:
-        self._actuallyWriteTag(indent, qualifiedTagName, actualAttributes, close)
+        if close == XmlWriter._CLOSE_NONE:
+            self._startTagToWrite = (indent, qualifiedTagName, actualAttributes)
+        else:
+            self._actuallyWriteTag(indent, qualifiedTagName, actualAttributes, close)
 
         # Process name spaces to remove
         if close in [XmlWriter._CLOSE_AT_END, XmlWriter._CLOSE_AT_START]:
@@ -833,19 +863,29 @@ class XmlWriter(object):
                 ...
             XmlError: tag stack must not be empty
         """
-        self._possiblyFlushTag()
         try:
             (namespace, name) = self._elementStack.pop()
         except IndexError:
             raise XmlError(u"tag stack must not be empty")
+        actualQualifiedName = _joinPossiblyQualifiedName(namespace, name)
         if expectedQualifiedName:
             # Validate that actual tag name matches expected name.
             uniExpectedQualifiedName = self._unicoded(expectedQualifiedName)
-            actualQualifiedName = _joinPossiblyQualifiedName(namespace, name)
             if actualQualifiedName != expectedQualifiedName:
                 self._elementStack.append((namespace, name))
                 raise XmlError(u"tag name must be %s but is %s" % (uniExpectedQualifiedName, actualQualifiedName))
-        self._possiblyWriteTag(namespace, name, XmlWriter._CLOSE_AT_START)
+
+        isConsolidatableStartEndTag = False
+        if self._startTagToWrite:
+            _, qualifiedStartTagName, attributes = self._startTagToWrite
+            if actualQualifiedName == qualifiedStartTagName:
+                isConsolidatableStartEndTag = True
+        if isConsolidatableStartEndTag:
+            self._startTagToWrite = None
+            self._possiblyWriteTag(namespace, name, XmlWriter._CLOSE_AT_END, attributes)
+        else:
+            self._possiblyFlushTag()
+            self._possiblyWriteTag(namespace, name, XmlWriter._CLOSE_AT_START)
 
     def tag(self, qualifiedName, attributes={}):
         self._possiblyFlushTag()
