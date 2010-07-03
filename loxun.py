@@ -275,6 +275,10 @@ And the result is:
 Version history
 ===============
 
+Version 0.7, xx-Jul-2010
+------------------------
+
+* xxx
 
 Version 0.6, 03-Jun-2010
 ------------------------
@@ -376,7 +380,7 @@ import os
 import xml.sax.saxutils
 from StringIO import StringIO
 
-__version__ = "0.6"
+__version__ = "0.7"
 VERSION_REV, VERSION_DATE = "$Id$".split()[2:4]
 
 class XmlError(Exception):
@@ -477,7 +481,7 @@ class XmlWriter(object):
     _PROCESSING_START = u"<?"
     _PROCESSING_END = u"?>"
 
-    # Possible value for _writeTag()'s ``close`` parameter.
+    # Possible value for _possiblyWriteTag()'s ``close`` parameter.
     _CLOSE_NONE = u"none"
     _CLOSE_AT_START = u"start"
     _CLOSE_AT_END = u"end"
@@ -537,6 +541,11 @@ class XmlWriter(object):
         self._contentHasBeenWritten = False
         self._sourceEncoding = sourceEncoding
         self._indent = self._unicoded(indent)
+
+        # `None` or a tuple of (indent, qualifiedTagName, attributes).
+        # See also: `_possiblyWriteTag()`. 
+        self._startTagToWrite = None
+
         indentWithoutWhiteSpace = self._indent.replace(u" ", u"").replace(u"\t", u"")
         assert not indentWithoutWhiteSpace, \
             "`indent` must contain only blanks or tabs but also has: %r" % indentWithoutWhiteSpace
@@ -635,6 +644,7 @@ class XmlWriter(object):
         self._write(xml.sax.saxutils.escape(text))
 
     def newline(self):
+        self._possiblyFlushTag()
         self._write(self._newline)
 
     def addNamespace(self, name, uri):
@@ -655,7 +665,7 @@ class XmlWriter(object):
             raise ValueError(u"namespace %r must added only once for current scope but already is %r" % (uniName, uniUri))
         self._namespacesToAdd.append((uniName, uniUri))
 
-    def _writeTag(self, namespace, name, close, attributes={}):
+    def _possiblyWriteTag(self, namespace, name, close, attributes={}):
         _assertIsUnicode("namespace", namespace)
         assert name
         _assertIsUnicode("name", name)
@@ -694,20 +704,46 @@ class XmlWriter(object):
             self._validateNamespaceItem(u"attribute", attributeNamespace, attributeName)
             actualAttributes[uniQualifiedAttributeName] = self._unicoded(attributeValue)
 
+        # Prepare indentation and qualified tag name to be written.
+        if self.isPretty:
+            indent = self._indent * len(self._elementStack)
+        else:
+            indent = ""
         self._validateNamespaceItem(u"tag", namespace, name)
         if namespace:
-            element = u"%s:%s" % (namespace, name)
+            qualifiedTagName = u"%s:%s" % (namespace, name)
         else:
-            element = name
+            qualifiedTagName = name
+
+        # TODO: if close == XmlWriter._CLOSE_NONE:
+        # TODO:   self._startTagToWrite = (namespace, name, attributes)
+        # TODO: else:
+        self._actuallyWriteTag(indent, qualifiedTagName, actualAttributes, close)
+
+        # Process name spaces to remove
+        if close in [XmlWriter._CLOSE_AT_END, XmlWriter._CLOSE_AT_START]:
+            scopeToRemove = self._scope()
+            if scopeToRemove in self._namespaces:
+                del self._namespaces[scopeToRemove]
+            
+    def _actuallyWriteTag(self, indent, qualifiedTagName, attributes, close):
+        assert self._startTagToWrite is None
+        assert indent is not None
+        _assertIsUnicode("indent", indent)
+        assert qualifiedTagName
+        _assertIsUnicode("qualifiedTagName", qualifiedTagName)
+        assert close
+        assert close in (XmlWriter._CLOSE_NONE, XmlWriter._CLOSE_AT_START, XmlWriter._CLOSE_AT_END)
+        assert attributes is not None
         if self._pretty:
-            self._write(self._indent * len(self._elementStack))
+            self._write(indent)
         self._write(u"<")
         if close == XmlWriter._CLOSE_AT_START:
             self._write(u"/")
-        self._write(element)
-        for attributeName in sorted(actualAttributes.keys()):
+        self._write(qualifiedTagName)
+        for attributeName in sorted(attributes.keys()):
             _assertIsUnicode(u"attribute name", attributeName)
-            value = actualAttributes[attributeName]
+            value = attributes[attributeName]
             _assertIsUnicode(u"value of attribute %r" % attributeName, value)
             self._write(u" %s=%s" % (attributeName, _quoted(value)))
         if close == XmlWriter._CLOSE_AT_END:
@@ -718,11 +754,19 @@ class XmlWriter(object):
         if self._pretty:
             self.newline()
 
-        # Process name spaces to remove
-        if close in [XmlWriter._CLOSE_AT_END, XmlWriter._CLOSE_AT_START]:
-            scopeToRemove = self._scope()
-            if scopeToRemove in self._namespaces:
-                del self._namespaces[scopeToRemove]
+    def _possiblyFlushTag(self):
+        """
+        If ``self._startTagToWrite`` is set, it contains a tuple
+        ``(indent, qualifiedTagName, attributes)`` describing a start tag that has not
+        been written yet. In this case, write the tag now and set
+        ``self._startTagToWrite`` to ``None``. This allows to optimize a sequence
+        of ``startTag()``/ ``endTag()`` with the same tag to be changed to
+        a simple ``tag()``.        
+        """
+        if self._startTagToWrite:
+            indent, qualifiedTagName, attributes = self._startTagToWrite;
+            self._startTagToWrite = None
+            self._actuallyWriteTag(indent, qualifiedTagName, attributes, XmlWriter._CLOSE_NONE)
 
     def startTag(self, qualifiedName, attributes={}):
         """
@@ -737,9 +781,10 @@ class XmlWriter(object):
 
             {"src": "../some.png", "xhtml:alt": "some image"}
         """
+        self._possiblyFlushTag()
         uniQualifiedName = self._unicoded(qualifiedName)
         namespace, name = _splitPossiblyQualifiedName(u"tag name", uniQualifiedName)
-        self._writeTag(namespace, name, XmlWriter._CLOSE_NONE, attributes)
+        self._possiblyWriteTag(namespace, name, XmlWriter._CLOSE_NONE, attributes)
         self._elementStack.append((namespace, name))
 
     def endTag(self, expectedQualifiedName=None):
@@ -788,6 +833,7 @@ class XmlWriter(object):
                 ...
             XmlError: tag stack must not be empty
         """
+        self._possiblyFlushTag()
         try:
             (namespace, name) = self._elementStack.pop()
         except IndexError:
@@ -799,12 +845,13 @@ class XmlWriter(object):
             if actualQualifiedName != expectedQualifiedName:
                 self._elementStack.append((namespace, name))
                 raise XmlError(u"tag name must be %s but is %s" % (uniExpectedQualifiedName, actualQualifiedName))
-        self._writeTag(namespace, name, XmlWriter._CLOSE_AT_START)
+        self._possiblyWriteTag(namespace, name, XmlWriter._CLOSE_AT_START)
 
     def tag(self, qualifiedName, attributes={}):
+        self._possiblyFlushTag()
         uniQualifiedName = self._unicoded(qualifiedName)
         namespace, name = _splitPossiblyQualifiedName(u"tag name", uniQualifiedName)
-        self._writeTag(namespace, name, XmlWriter._CLOSE_AT_END, attributes)
+        self._possiblyWriteTag(namespace, name, XmlWriter._CLOSE_AT_END, attributes)
 
     def text(self, text):
         """
@@ -847,6 +894,7 @@ class XmlWriter(object):
             <some>
             </some>
         """
+        self._possiblyFlushTag()
         _validateNotNone(u"text", text)
         uniText = self._unicoded(text)
         if self._pretty:
@@ -897,6 +945,7 @@ class XmlWriter(object):
             lines
             -->
         """
+        self._possiblyFlushTag()
         uniText = self._unicoded(text)
         if not embedInBlanks and not uniText:
             raise XmlError("text for comment must not be empty, or option embedInBlanks=True must be set")
@@ -949,6 +998,7 @@ class XmlWriter(object):
             lines
             <tag>&&&]]>
         """
+        self._possiblyFlushTag()
         self._rawBlock(u"CDATA section", XmlWriter._CDATA_START, XmlWriter._CDATA_END, text)
 
     def processingInstruction(self, target, text):
@@ -970,6 +1020,7 @@ class XmlWriter(object):
             >>> print out.getvalue().rstrip("\\r\\n")
             <?xsl-stylesheet href="some.xsl" type="text/xml"?>
         """
+        self._possiblyFlushTag()
         targetName = u"target for processing instrution"
         _validateNotNone(targetName, text)
         _validateNotEmpty(targetName, text)
@@ -1017,6 +1068,7 @@ class XmlWriter(object):
             >>> print out.getvalue().rstrip("\\r\\n")
             >(^_^)<  not particular valid XML &&&
         """
+        self._possiblyFlushTag()
         _validateNotNone(u"text", text)
         uniText = self._unicoded(text)
         self._write(uniText)
@@ -1043,6 +1095,7 @@ class XmlWriter(object):
                 ...
             XmlError: missing end tags must be added: </some>
         """
+        self._possiblyFlushTag()
         remainingElements = ""
         while self._elementStack:
             if remainingElements:
@@ -1054,4 +1107,5 @@ class XmlWriter(object):
 
 if __name__ == "__main__":
     import doctest
+    print "loxun %s: running doctest" % __version__
     doctest.testmod()
