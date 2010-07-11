@@ -477,8 +477,7 @@ import os
 import xml.sax.saxutils
 from StringIO import StringIO
 
-__version__ = "0.8"
-VERSION_REV, VERSION_DATE = "$Id$".split()[2:4]
+__version__ = "0.9"
 
 class XmlError(Exception):
     """
