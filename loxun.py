@@ -297,6 +297,12 @@ output only contains a simple ``<person ... />`` tag.
 Version history
 ===============
 
+Version 0.8, 11-Jul-2010
+------------------------
+
+* Added a couple of files missing from the distribution, most important the
+  test suite.
+
 Version 0.7, 03-Jul-2010
 ------------------------
 
@@ -406,7 +412,7 @@ import os
 import xml.sax.saxutils
 from StringIO import StringIO
 
-__version__ = "0.7"
+__version__ = "0.8"
 VERSION_REV, VERSION_DATE = "$Id$".split()[2:4]
 
 class XmlError(Exception):

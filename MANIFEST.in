@@ -1,0 +1,4 @@
+include *.py
+include *.txt
+include *.config
+include test/test*.py
