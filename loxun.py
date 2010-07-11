@@ -114,6 +114,30 @@ And this is what we get:
       </body>
     </html>
 
+Specifying attributes
+
+First create a writer:
+
+    >>> from StringIO import StringIO
+    >>> out = StringIO()
+    >>> xml = XmlWriter(out)
+
+Now write the content:
+
+    >>> xml.tag("img", {"src": "smile.png", "alt": ":-)"})
+
+Attribute values do not have to be strings, other types will be converted to
+Unicode using Python's ``unicode()`` function:
+
+    >>> xml.tag("img", {"src": "wink.png", "alt": ";-)", "width": 32, "height": 24})
+
+And the result is:
+
+    >>> print out.getvalue().rstrip("\\r\\n")
+    <?xml version="1.0" encoding="utf-8"?>
+    <img alt=":-)" src="smile.png" />
+    <img alt=";-)" height="24" src="wink.png" width="32" />
+
 Using namespaces
 ================
 
@@ -199,7 +223,7 @@ Now everything works out again:
 Of course in practice you will not mess around with hex codes to pass your
 texts. Instead you just specify the source encoding using the mechanisms
 described in PEP 263,
-`Defining Python Source Code Encodings <http://www.python.org/dev/peps/pep-0263/>`_:
+`Defining Python Source Code Encodings <http://www.python.org/dev/peps/pep-0263/>`_.
 
 Changing the XML prolog
 =======================
@@ -294,12 +318,53 @@ Despite the explicit ``startTag("person")`` and matching ``endtag()``, the
 output only contains a simple ``<person ... />`` tag.
 
 
+Future
+======
+
+Currently loxun does what it was built for.
+
+The plan for the near future is to polish some parts of the code, release
+version 1.0 and be done with it.
+
+Some features that I might add eventually:
+
+* Add validation of tag and attribute names to ensure that all characters used
+  are allowed. For instance, currently loxun does not complain about a tag
+  named "a#b*c$d_".
+* Raise an `XmlError` when namespaces are added with attributes instead of
+  `XmlWriter.addNamespace()`.
+* Add support for Python's ``with`` so you don not have to manually call
+  `XmlWriter.close()`.
+* Logging support to simplify debugging of the calling code. Probably
+  `XmlWriter` would get a property ``logger`` which is a standard
+  ``logging.Logger``. By default it could log original exceptions that
+  loxun turns into `XmlError`s and namespaces opened and closed.
+  Changing it to ``logging.DEBUG`` would log each tag and XML construct
+  written, including additional information about the internal tag stack.
+  That way you could dynamically increase or decrease logging output.
+* Rethink pretty printing. Instead of a global property that can only be set
+  when initializing an `XmlWriter`, it could be a optional parameter for
+  `XmlWriter.startTag()` where it could be turned on and off as needed. And
+  the property could be named ``literal`` instead of ``pretty`` (with an
+  inverse logic). 
+* Publish my local Subversion repository to document all changes. So far I did
+  not see a need for that because the package is really trivial.
+
+Some features other XML libraries support but I never saw in real use for:
+
+* Specify attribute order for tags.
+
+
 Version history
 ===============
 
 Version 0.8, 11-Jul-2010
 ------------------------
 
+* Added possibility to pass attributes to `XmlWriter.startTag()` and
+  `XmlWriter.tag()` with values that have other types than ``str`` or
+  ``unicode``. When written to XML, the value is converted using Python's
+  built-in ``unicode()`` function.
 * Added a couple of files missing from the distribution, most important the
   test suite.
 
@@ -395,12 +460,12 @@ Version 0.1, 15-May-2010
 # Extract the first sentence.
 #  for child in node:
 #     if isinstance(child, docutils.nodes.Text):
-#         # FIXME: m = self._SUMMARY_RE.match(child.data)
+#         # FIXED: m = self._SUMMARY_RE.match(child.data)
 #         text = child.astext()
 #         m = self._SUMMARY_RE.match(text)
 #         if m:
 #             summary_pieces.append(docutils.nodes.Text(m.group(1)))
-#             # FIXME: other = child.data[m.end():]
+#             # FIXED: other = child.data[m.end():]
 #             other = text[m.end():]
 #             if other and not other.isspace():
 #                 self.other_docs = True
@@ -564,15 +629,15 @@ class XmlWriter(object):
         _validateNotNoneOrEmpty("version", version)
         self._output = output
         self._pretty = pretty
-        self._encoding = self._unicoded(encoding)
-        self._errors = self._unicoded(errors)
+        self._encoding = self._unicodedFromString(encoding)
+        self._errors = self._unicodedFromString(errors)
         self._namespaces = {}
         self._elementStack = collections.deque()
         self._namespacesToAdd = collections.deque()
         self._isOpen = True
         self._contentHasBeenWritten = False
         self._sourceEncoding = sourceEncoding
-        self._indent = self._unicoded(indent)
+        self._indent = self._unicodedFromString(indent)
 
         # `None` or a tuple of (indent, qualifiedTagName, attributes).
         # See also: `_possiblyWriteTag()`. 
@@ -581,13 +646,13 @@ class XmlWriter(object):
         indentWithoutWhiteSpace = self._indent.replace(u" ", u"").replace(u"\t", u"")
         assert not indentWithoutWhiteSpace, \
             "`indent` must contain only blanks or tabs but also has: %r" % indentWithoutWhiteSpace
-        self._newline = self._unicoded(newline)
+        self._newline = self._unicodedFromString(newline)
         _VALID_NEWLINES = [u"\r", u"\n", u"\r\n"]
         assert self._newline in _VALID_NEWLINES, \
             "`newline` is %r but must be one of: %s" % (self._newline, _VALID_NEWLINES)
         if prolog:
             self.processingInstruction(u"xml", "version=%s encoding=%s" % ( \
-                _quoted(self._unicoded(version)),
+                _quoted(self._unicodedFromString(version)),
                 _quoted(self._encoding))
             )
 
@@ -614,7 +679,7 @@ class XmlWriter(object):
         _assertIsUnicode(u"text", text)
         return text.encode(self._encoding, self._errors)
 
-    def _unicoded(self, text):
+    def _unicodedFromString(self, text):
         """
         Same value as ``text`` but converted to unicode in case ``text`` is a
         string. ``None`` remains ``None``.
@@ -625,6 +690,81 @@ class XmlWriter(object):
             result = text
         else:
             result = unicode(text, self._sourceEncoding)
+        return result
+
+    def _raiseStrOrUnicodeBroken(self, method, value, error):
+        """
+        Raise `XmlError` pointing out the ``__str__()`` or ``__unicode__`` of
+        of the type of ``value`` must be implemented properly. 
+        """
+        assert method in ("str", "unicode")
+        assert error is not None
+
+        someTypeName = type(value).__name__
+        message = "%s.__%s()__ must return a value of type %s or %s but failed for value %r with: %s" % (
+            someTypeName, method, str.__name__, unicode.__name__, value, error
+        )
+        raise XmlError(message)
+
+    def _unicoded(self, some):
+        """
+        Same value as ``some`` but converted to unicode in case ``some`` is
+        not already a unicode string. ``None`` remains ``None``.
+        
+        Examples:
+        
+        >>> from StringIO import StringIO
+        >>> out = StringIO()
+        >>> xml = XmlWriter(out)
+        >>> xml._unicoded(u"abc")
+        u'abc'
+        >>> xml._unicoded("abc")
+        u'abc'
+        >>> xml._unicoded(123)
+        u'123'
+
+        >>> import decimal
+        >>> xml._unicoded(decimal.Decimal("123.45"))
+        u'123.45'
+        
+        In order for this to work, the type of ``some`` must have a proper
+        implementation of ``__unicode()__`` or ``__str__``.
+
+        Here is an example for a class with a broken ``__unicode__``, which
+        already fails if ``unicode()`` is called without loxun:
+
+        >>> class Broken(object):
+        ...   def __unicode__(self):
+        ...     return 123 # BROKEN: Return type must be str or unicode
+        >>> unicode(Broken())
+        Traceback (most recent call last):
+        ...
+        TypeError: coercing to Unicode: need string or buffer, int found
+
+        Consequently, using a value of ``Broken`` as attribute value will fail too:
+        
+        >>> xml.tag("someTag", {"someAttribute": Broken()}) #doctest: +ELLIPSIS
+        Traceback (most recent call last):
+        ...
+        XmlError: Broken.__unicode()__ must return a value of type str or unicode but failed for value ... with: coercing to Unicode: need string or buffer, int found
+        """
+        if some is None:
+            result = None
+        elif isinstance(some, unicode):
+            result = some
+        else:
+            if isinstance(some, str):
+                result = some
+            else:
+                try:
+                    result = unicode(some)
+                except Exception, error:
+                    self._raiseStrOrUnicodeBroken("unicode", some, error)
+            if not isinstance(result, unicode):
+                try:
+                    result = unicode(some, self._sourceEncoding)
+                except Exception, error:
+                    self._raiseStrOrUnicodeBroken("unicode", some, error)
         return result
 
     def _elementName(self, name, namespace):
@@ -691,8 +831,8 @@ class XmlWriter(object):
         # TODO: Validate that name is NCName.
         _validateNotNoneOrEmpty("name", name)
         _validateNotNoneOrEmpty("uri", uri)
-        uniName = self._unicoded(name)
-        uniUri = self._unicoded(uri)
+        uniName = self._unicodedFromString(name)
+        uniUri = self._unicodedFromString(uri)
         namespacesForScope = self._namespaces.get(self._scope())
         namespaceExists = (uniName in self._namespacesToAdd) or (
             (namespacesForScope != None) and (uniName in namespacesForScope)
@@ -735,7 +875,7 @@ class XmlWriter(object):
 
         # Convert attributes to unicode.
         for qualifiedAttributeName, attributeValue in attributes.items():
-            uniQualifiedAttributeName = self._unicoded(qualifiedAttributeName)
+            uniQualifiedAttributeName = self._unicodedFromString(qualifiedAttributeName)
             attributeNamespace, attributeName = _splitPossiblyQualifiedName(u"attribute name", uniQualifiedAttributeName)
             self._validateNamespaceItem(u"attribute", attributeNamespace, attributeName)
             actualAttributes[uniQualifiedAttributeName] = self._unicoded(attributeValue)
@@ -818,7 +958,7 @@ class XmlWriter(object):
             {"src": "../some.png", "xhtml:alt": "some image"}
         """
         self._possiblyFlushTag()
-        uniQualifiedName = self._unicoded(qualifiedName)
+        uniQualifiedName = self._unicodedFromString(qualifiedName)
         namespace, name = _splitPossiblyQualifiedName(u"tag name", uniQualifiedName)
         self._possiblyWriteTag(namespace, name, XmlWriter._CLOSE_NONE, attributes)
         self._elementStack.append((namespace, name))
@@ -876,7 +1016,7 @@ class XmlWriter(object):
         actualQualifiedName = _joinPossiblyQualifiedName(namespace, name)
         if expectedQualifiedName:
             # Validate that actual tag name matches expected name.
-            uniExpectedQualifiedName = self._unicoded(expectedQualifiedName)
+            uniExpectedQualifiedName = self._unicodedFromString(expectedQualifiedName)
             if actualQualifiedName != expectedQualifiedName:
                 self._elementStack.append((namespace, name))
                 raise XmlError(u"tag name must be %s but is %s" % (uniExpectedQualifiedName, actualQualifiedName))
@@ -895,7 +1035,7 @@ class XmlWriter(object):
 
     def tag(self, qualifiedName, attributes={}):
         self._possiblyFlushTag()
-        uniQualifiedName = self._unicoded(qualifiedName)
+        uniQualifiedName = self._unicodedFromString(qualifiedName)
         namespace, name = _splitPossiblyQualifiedName(u"tag name", uniQualifiedName)
         self._possiblyWriteTag(namespace, name, XmlWriter._CLOSE_AT_END, attributes)
 
@@ -942,7 +1082,7 @@ class XmlWriter(object):
         """
         self._possiblyFlushTag()
         _validateNotNone(u"text", text)
-        uniText = self._unicoded(text)
+        uniText = self._unicodedFromString(text)
         if self._pretty:
             for uniLine in StringIO(uniText):
                 self._writeIndent()
@@ -992,7 +1132,7 @@ class XmlWriter(object):
             -->
         """
         self._possiblyFlushTag()
-        uniText = self._unicoded(text)
+        uniText = self._unicodedFromString(text)
         if not embedInBlanks and not uniText:
             raise XmlError("text for comment must not be empty, or option embedInBlanks=True must be set")
         if u"--" in uniText:
@@ -1070,10 +1210,10 @@ class XmlWriter(object):
         targetName = u"target for processing instrution"
         _validateNotNone(targetName, text)
         _validateNotEmpty(targetName, text)
-        uniFullText = self._unicoded(target)
+        uniFullText = self._unicodedFromString(target)
         if text:
             uniFullText += " "
-            uniFullText += self._unicoded(text)
+            uniFullText += self._unicodedFromString(text)
         self._rawBlock(u"processing instruction", XmlWriter._PROCESSING_START, XmlWriter._PROCESSING_END, uniFullText)
 
     def _rawBlock(self, name, start, end, text):
@@ -1081,7 +1221,7 @@ class XmlWriter(object):
         _assertIsUnicode("start", start)
         _assertIsUnicode("end", end)
         _validateNotNone(u"text for %s" % name, text)
-        uniText = self._unicoded(text)
+        uniText = self._unicodedFromString(text)
         if end in uniText:
             raise XmlError("text for %s must not contain \"%s\"" % (name, end))
         self._writePrettyIndent()
@@ -1116,7 +1256,7 @@ class XmlWriter(object):
         """
         self._possiblyFlushTag()
         _validateNotNone(u"text", text)
-        uniText = self._unicoded(text)
+        uniText = self._unicodedFromString(text)
         self._write(uniText)
 
     def close(self):
