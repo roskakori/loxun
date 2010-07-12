@@ -147,7 +147,31 @@ class XmlWriterTest(unittest.TestCase):
         xml.addNamespace("x", "http://xxx/");
         xml.tag("x:inner")
         self.assertRaises(loxun.XmlError, xml.startTag, "x:outer")
- 
+
+    def testWithOk(self):
+        with StringIO() as out:        
+            with loxun.XmlWriter(out) as xml:
+                xml.tag("x")
+
+    def testWithMissingEndTag(self):
+        with StringIO() as out:        
+            try:
+                with loxun.XmlWriter(out) as xml:
+                    xml.startTag("x")
+                self.fail("XmlWriter.__exit__() must detect missing </x>")
+            except loxun.XmlError:
+                # Ignore expected error.
+                pass
+
+    def testWithException(self):
+        with StringIO() as out:        
+            try:
+                with loxun.XmlWriter(out) as xml:
+                    xml.startTag("x")
+                    raise ValueError("test")
+            except ValueError, error:
+                # Ignore expected error.
+                self.assertEquals(unicode(error), u"test")
 
 def createTestSuite():
     """

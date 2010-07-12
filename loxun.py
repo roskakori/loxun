@@ -333,8 +333,6 @@ Some features that I might add eventually:
   named "a#b*c$d_".
 * Raise an `XmlError` when namespaces are added with attributes instead of
   `XmlWriter.addNamespace()`.
-* Add support for Python's ``with`` so you don not have to manually call
-  `XmlWriter.close()`.
 * Logging support to simplify debugging of the calling code. Probably
   `XmlWriter` would get a property ``logger`` which is a standard
   ``logging.Logger``. By default it could log original exceptions that
@@ -347,8 +345,7 @@ Some features that I might add eventually:
   `XmlWriter.startTag()` where it could be turned on and off as needed. And
   the property could be named ``literal`` instead of ``pretty`` (with an
   inverse logic). 
-* Publish my local Subversion repository to document all changes. So far I did
-  not see a need for that because the package is really trivial.
+* Add a ``DomWriter`` that creates a ``xml.dom.minidom.Document``.
 
 Some features other XML libraries support but I never saw in real use for:
 
@@ -357,6 +354,12 @@ Some features other XML libraries support but I never saw in real use for:
 
 Version history
 ===============
+
+Version 0.9, xx-Jul-2010
+------------------------
+
+* Added support for Python's ``with`` so you don not have to manually call
+  `XmlWriter.close()` anymore.
 
 Version 0.8, 11-Jul-2010
 ------------------------
@@ -654,6 +657,18 @@ class XmlWriter(object):
                 _quoted(self._unicodedFromString(version)),
                 _quoted(self._encoding))
             )
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, errorType, error, traceback):
+        if not error:
+            # There's no point in calling `close()` in case of previous errors
+            # because it most likely will cause another error and thus discard
+            # the original error which holds actually useful information.
+            #
+            # Not calling `close()` will *not* introduce any resource leaks.
+            self.close()
 
     @property
     def isPretty(self):
