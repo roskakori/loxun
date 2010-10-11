@@ -323,10 +323,8 @@ Future
 
 Currently loxun does what it was built for.
 
-The plan for the near future is to polish some parts of the code, release
-version 1.0 and be done with it.
-
-Some features that I might add eventually:
+There are is no real plan to improve it in the near future, but here is a list
+of features that might be added at some point:
 
 * Add validation of tag and attribute names to ensure that all characters used
   are allowed. For instance, currently loxun does not complain about a tag
@@ -347,19 +345,22 @@ Some features that I might add eventually:
   inverse logic). 
 * Add a ``DomWriter`` that creates a ``xml.dom.minidom.Document``.
 
-Some features other XML libraries support but I never saw in real use for:
+Some features other XML libraries support but I never saw any real use for:
 
 * Specify attribute order for tags.
 
+If you want to improve loxun yourself, visit its Git repository at 
+<http://github.com/roskakori/loxun>.
 
 Version history
 ===============
 
-Version 0.9, xx-Jul-2010
+Version 1.0, 11-Oct-2010
 ------------------------
 
 * Added support for Python's ``with`` so you don not have to manually call
   `XmlWriter.close()` anymore.
+* Added Git repository at <http://github.com/roskakori/loxun>.
 
 Version 0.8, 11-Jul-2010
 ------------------------
@@ -477,10 +478,11 @@ Version 0.1, 15-May-2010
 
 import collections
 import os
+import re
 import xml.sax.saxutils
 from StringIO import StringIO
 
-__version__ = "0.9"
+__version__ = "1.0"
 
 class XmlError(Exception):
     """
@@ -584,6 +586,14 @@ class XmlWriter(object):
     _CLOSE_NONE = u"none"
     _CLOSE_AT_START = u"start"
     _CLOSE_AT_END = u"end"
+
+    # Build regular expressions to validate tag and attribute names.
+    _NAME_START_CHARS = u"_a-zA-Z\u00c0-\u00d6\u00d8-\u00f6\00f8-\u02ff\u0370-\u037d\u037f-\u1fff\u200c-\u200d\u2070-\u218f\u2c00-\u2fef\u3001-\ud7ff\uf900-\ufdcf\ufdf0-\ufffd"
+    _NAME_CHARS = "\\-\\.0-9" + _NAME_START_CHARS + "\u00b7\u0300-\u036f\u203f-\u2040"
+    _NAME_START_CHAR_PATTERN = "[" + _NAME_START_CHARS + "]"
+    _NAME_CHAR_PATTERN = "[" + _NAME_CHARS + "]"
+    _nameStartCharRegEx = re.compile(_NAME_START_CHAR_PATTERN, re.UNICODE)
+    _nameCharRegEx = re.compile(_NAME_START_CHAR_PATTERN, re.UNICODE)
 
     def __init__(self, output, pretty=True, indent=u"  ", newline=os.linesep, encoding=u"utf-8", errors=u"strict", prolog=True, version=u"1.0", sourceEncoding="ascii"):
         """
@@ -781,6 +791,24 @@ class XmlWriter(object):
                     self._raiseStrOrUnicodeBroken("unicode", some, error)
         return result
 
+    def _isNameStartChar(self, some):
+        """
+        NameStartChar ::= ":" | [A-Z] | "_" | [a-z] | [#xC0-#xD6] | [#xD8-#xF6]
+        | [#xF8-#x2FF] | [#x370-#x37D] | [#x37F-#x1FFF] | [#x200C-#x200D]
+        | [#x2070-#x218F] | [#x2C00-#x2FEF] | [#x3001-#xD7FF]
+        | [#xF900-#xFDCF] | [#xFDF0-#xFFFD] | [#x10000-#xEFFFF]
+        """
+        assert some
+        return True
+    
+    def _isNameChar(self, some):
+        """
+        NameChar ::= NameStartChar | "-" | "." | [0-9] | #xB7
+        | [#x0300-#x036F] | [#x203F-#x2040]
+        """
+        assert some
+        return True
+        
     def _elementName(self, name, namespace):
         assert name
         if namespace:

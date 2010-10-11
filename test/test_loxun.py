@@ -16,8 +16,13 @@ Tests for loxun.
 #
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Allow "with" statement to be used in tests even for Python 2.5
+from __future__ import with_statement
+
 import doctest
 import logging
+import random
 import sys
 import unittest
 from StringIO import StringIO
@@ -33,6 +38,14 @@ def _getXmlText(writer):
     assert writer
     writer.output.seek(0)
     result = [line.rstrip("\r\n") for line in writer.output]
+    return result
+
+_randy = random.Random()
+
+def _randomName():
+    result = u""
+    for _ in range(5 + _randy.randint(0, 10)):
+        result += unichr(_randy.randint(ord("a"), ord("z")))
     return result
 
 class XmlWriterTest(unittest.TestCase):
@@ -149,29 +162,38 @@ class XmlWriterTest(unittest.TestCase):
         self.assertRaises(loxun.XmlError, xml.startTag, "x:outer")
 
     def testWithOk(self):
-        with StringIO() as out:        
-            with loxun.XmlWriter(out) as xml:
-                xml.tag("x")
+        out = StringIO()       
+        with loxun.XmlWriter(out) as xml:
+            xml.tag("x")
 
     def testWithMissingEndTag(self):
-        with StringIO() as out:        
-            try:
-                with loxun.XmlWriter(out) as xml:
-                    xml.startTag("x")
-                self.fail("XmlWriter.__exit__() must detect missing </x>")
-            except loxun.XmlError:
-                # Ignore expected error.
-                pass
+        out = StringIO()       
+        try:
+            with loxun.XmlWriter(out) as xml:
+                xml.startTag("x")
+            self.fail("XmlWriter.__exit__() must detect missing </x>")
+        except loxun.XmlError:
+            # Ignore expected error.
+            pass
 
     def testWithException(self):
-        with StringIO() as out:        
-            try:
-                with loxun.XmlWriter(out) as xml:
-                    xml.startTag("x")
-                    raise ValueError("test")
-            except ValueError, error:
-                # Ignore expected error.
-                self.assertEquals(unicode(error), u"test")
+        out = StringIO()       
+        try:
+            with loxun.XmlWriter(out) as xml:
+                xml.startTag("x")
+                raise ValueError("test")
+        except ValueError, error:
+            # Ignore expected error.
+            self.assertEquals(unicode(error), u"test")
+
+    def testPerformance(self):
+        out = StringIO()       
+        with loxun.XmlWriter(out) as xml:
+            tagName = _randomName()
+            attributes = {}
+            for _ in range(_randy.randint(2, 8)):
+                attributes[_randomName()] = ""
+            xml.tag(tagName, attributes)
 
 def createTestSuite():
     """

@@ -23,7 +23,7 @@ import errno
 import os.path
 import subprocess
 from distutils.core import setup
-from distutils.cmd import Command 
+from distutils.cmd import Command
 
 import loxun
 
@@ -43,7 +43,7 @@ class _ApiCommand(Command):
 
     def initialize_options(self):
         pass
-    
+
     def finalize_options(self):
         pass
 
@@ -65,7 +65,7 @@ setup(
     license="GNU Lesser General Public License 3 or later",
     long_description=loxun.__doc__, #@UndefinedVariable
     classifiers=[
-        "Development Status :: 4 - Beta",
+        "Development Status :: 5 - Production/Stable",
         "Environment :: Plugins",
         "Intended Audience :: Developers",
         "License :: OSI Approved :: GNU Library or Lesser General Public License (LGPL)",
@@ -74,6 +74,7 @@ setup(
         # TODO: Test with Python 2.4. Who knows, it might actually work.
         "Programming Language :: Python :: 2.5",
         "Programming Language :: Python :: 2.6",
+        "Programming Language :: Python :: 2.7",
         "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
         "Topic :: Software Development :: Libraries",
         "Topic :: Text Processing :: Markup :: XML",
