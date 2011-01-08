@@ -926,7 +926,7 @@ class XmlWriter(object):
         if self.isPretty:
             indent = self._indent * len(self._elementStack)
         else:
-            indent = ""
+            indent = u""
         self._validateNamespaceItem(u"tag", namespace, name)
         if namespace:
             qualifiedTagName = u"%s:%s" % (namespace, name)
