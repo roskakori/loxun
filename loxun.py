@@ -225,6 +225,43 @@ texts. Instead you just specify the source encoding using the mechanisms
 described in PEP 263,
 `Defining Python Source Code Encodings <http://www.python.org/dev/peps/pep-0263/>`_.
 
+Pretty printing and indentation
+===============================
+
+By default, loxun starts a new line for each ``startTag`` and indents the
+content with two spaces. You can change the spaces to any number of spaces and
+tabs you like:
+
+    >>> out = StringIO()
+    >>> xml = XmlWriter(out, indent="    ") # <-- Indent with 4 spaces.
+    >>> xml.startTag("html")
+    >>> xml.startTag("body")
+    >>> xml.text("Hello world!")
+    >>> xml.endTag()
+    >>> xml.endTag()
+    >>> xml.close()
+    >>> print out.getvalue().rstrip("\\r\\n")
+    <?xml version="1.0" encoding="utf-8"?>
+    <html>
+        <body>
+            Hello world!
+        </body>
+    </html>
+
+You can disable pretty printing all together using ``pretty=False``, resulting
+in an output of a single large line:
+
+    >>> out = StringIO()
+    >>> xml = XmlWriter(out, pretty=False) # <-- Disable pretty printing.
+    >>> xml.startTag("html")
+    >>> xml.startTag("body")
+    >>> xml.text("Hello world!")
+    >>> xml.endTag()
+    >>> xml.endTag()
+    >>> xml.close()
+    >>> print out.getvalue().rstrip("\\r\\n")
+    <?xml version="1.0" encoding="utf-8"?><html><body>Hello world!</body></html>
+
 Changing the XML prolog
 =======================
 
@@ -355,6 +392,12 @@ If you want to improve loxun yourself, visit its Git repository at
 Version history
 ===============
 
+Version 1.1, 08-Jan-2011
+------------------------
+
+* Fixed ``AssertionError`` when ``pretty`` was set to ``False`` (#1;
+  contributed by David Cramer).
+
 Version 1.0, 11-Oct-2010
 ------------------------
 
@@ -433,7 +476,7 @@ Version 0.1, 15-May-2010
 
 * Initial release.
 """
-# Copyright (C) 2010 Thomas Aglassinger
+# Copyright (C) 2010-2011 Thomas Aglassinger
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License as published by
@@ -482,7 +525,7 @@ import re
 import xml.sax.saxutils
 from StringIO import StringIO
 
-__version__ = "1.0"
+__version__ = "1.1"
 
 class XmlError(Exception):
     """
@@ -612,7 +655,7 @@ class XmlWriter(object):
         a single line unless you use `newline()` or write text with newline
         characters in it.
 
-        Set ``indent`` to the string that shoud be used for each indentation
+        Set ``indent`` to the string that should be used for each indentation
         level.
 
         Set ``newline`` to the string that should be used at the end of each
