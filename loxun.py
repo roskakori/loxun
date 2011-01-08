@@ -395,20 +395,17 @@ Version history
 ===============
 
 Version 1.1, 08-Jan-2011
-------------------------
 
 * Fixed ``AssertionError`` when ``pretty`` was set to ``False``
   (issue #1; fixed by David Cramer).
 
 Version 1.0, 11-Oct-2010
-------------------------
 
 * Added support for Python's ``with`` so you don not have to manually call
   `XmlWriter.close()` anymore.
 * Added Git repository at <http://github.com/roskakori/loxun>.
 
 Version 0.8, 11-Jul-2010
-------------------------
 
 * Added possibility to pass attributes to `XmlWriter.startTag()` and
   `XmlWriter.tag()` with values that have other types than ``str`` or
@@ -418,7 +415,6 @@ Version 0.8, 11-Jul-2010
   test suite.
 
 Version 0.7, 03-Jul-2010
-------------------------
 
 * Added optimization of matching start and end tag without any content in
   between. For example, ``x.startTag("some"); x.endTag()`` results in
@@ -427,7 +423,6 @@ Version 0.7, 03-Jul-2010
    of ``ValueError``. 
 
 Version 0.6, 03-Jun-2010
-------------------------
 
 * Added option ``indent`` to specify the indentation text each new line starts with.
 * Added option ``newline`` to specify how lines written should end.
@@ -436,21 +431,18 @@ Version 0.6, 03-Jun-2010
 * Cleaned up documentation.
 
 Version 0.5, 25-May-2010
-------------------------
 
 * Fixed typo in namespace attribute name.
 * Fixed adding of namespaces before calls to `XmlWriter.tag()` which resulted
   in an `XmlError`.
 
 Version 0.4, 21-May-2010
-------------------------
 
 * Added option ``sourceEncoding`` to simplify processing of classic strings.
   The manual section "Working with non ASCII characters" explains how to use
   it.
 
 Version 0.3, 17-May-2010
-------------------------
 
 * Added scoped namespaces which are removed automatically by
   `XmlWriter.endTag()`.
@@ -464,7 +456,6 @@ Version 0.3, 17-May-2010
   whole elements.
 
 Version 0.2, 16-May-2010
-------------------------
 
 * Added `XmlWriter.comment()`, `XmlWriter.cdata()` and
   `XmlWriter.processingInstruction()` to write these specific XML constructs.
@@ -474,7 +465,6 @@ Version 0.2, 16-May-2010
 * Fixed missing "?" in prolog.
 
 Version 0.1, 15-May-2010
-------------------------
 
 * Initial release.
 """
