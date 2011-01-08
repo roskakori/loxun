@@ -15,7 +15,7 @@ Upload release to PyPI::
 
 Tag a release::
 
-  $ git tag -a -m "Tagged version 0.x." 0.x
+  $ git tag -a -m "Tagged version 1.x." v1.x
   $ git push --tags
 
 Build API documentation
