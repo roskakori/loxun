@@ -1,9 +1,49 @@
 """
 Installer for loxun.
 
-To create the installer archive, run::
+Developer cheat sheet
+---------------------
 
-  python setup.py sdist --formats=zip
+Create the installer archive::
+
+  $ python setup.py sdist --formats=zip
+
+Upload release to PyPI::
+
+  $ python test/test_loxun.py
+  $ python setup.py sdist --formats=zip upload
+
+Tag a release::
+
+  $ git tag -a -m "Tagged version 0.x." 0.x
+  $ git push --tags
+
+Build API documentation
+-----------------------
+
+Patch Epydoc 3.0.1 to work with docutils 0.6:
+
+In ``epydoc/markup/restructuredtext.py``, change in 
+``_SummaryExtractor.__init__()``::
+
+  # Extract the first sentence.
+  for child in node:
+     if isinstance(child, docutils.nodes.Text):
+         # FIXED: m = self._SUMMARY_RE.match(child.data)
+         text = child.astext()
+         m = self._SUMMARY_RE.match(text)
+         if m:
+             summary_pieces.append(docutils.nodes.Text(m.group(1)))
+             # FIXED: other = child.data[m.end():]
+             other = text[m.end():]
+             if other and not other.isspace():
+                 self.other_docs = True
+             break
+     summary_pieces.append(child)
+
+Run::
+
+  $ python setup.py api
 """
 # Copyright (C) 2010 Thomas Aglassinger
 #
@@ -19,6 +59,23 @@ To create the installer archive, run::
 #
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Required patch for Epydoc 3.0.1 to work with docutils 0.6:
+# In epydoc/markup/restructuredtext.py, change in _SummaryExtractor.__init__():
+# Extract the first sentence.
+#  for child in node:
+#     if isinstance(child, docutils.nodes.Text):
+#         # FIXED: m = self._SUMMARY_RE.match(child.data)
+#         text = child.astext()
+#         m = self._SUMMARY_RE.match(text)
+#         if m:
+#             summary_pieces.append(docutils.nodes.Text(m.group(1)))
+#             # FIXED: other = child.data[m.end():]
+#             other = text[m.end():]
+#             if other and not other.isspace():
+#                 self.other_docs = True
+#             break
+#     summary_pieces.append(child)
 import errno
 import os.path
 import subprocess
