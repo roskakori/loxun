@@ -394,6 +394,10 @@ Some features other XML libraries support but I never saw any real use for:
 Version history
 ===============
 
+Version 1.2, 2011-03-12
+
+* Fixed ``AttributeError`` when ``XmlWriter(..., encoding=...)`` was set.
+
 Version 1.1, 08-Jan-2011
 
 * Fixed ``AssertionError`` when ``pretty`` was set to ``False``
@@ -488,7 +492,7 @@ import re
 import xml.sax.saxutils
 from StringIO import StringIO
 
-__version__ = "1.1"
+__version__ = "1.2"
 
 class XmlError(Exception):
     """
@@ -647,6 +651,7 @@ class XmlWriter(object):
         _validateNotNoneOrEmpty("version", version)
         self._output = output
         self._pretty = pretty
+        self._sourceEncoding = sourceEncoding
         self._encoding = self._unicodedFromString(encoding)
         self._errors = self._unicodedFromString(errors)
         self._namespaces = {}
@@ -654,7 +659,6 @@ class XmlWriter(object):
         self._namespacesToAdd = collections.deque()
         self._isOpen = True
         self._contentHasBeenWritten = False
-        self._sourceEncoding = sourceEncoding
         self._indent = self._unicodedFromString(indent)
 
         # `None` or a tuple of (indent, qualifiedTagName, attributes).

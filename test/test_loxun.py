@@ -53,6 +53,10 @@ class XmlWriterTest(unittest.TestCase):
         assert writer
         self.assertEqual(_getXmlText(writer), actual)
     
+    def testCanSetEncoding(self):
+        xml = loxun.XmlWriter(StringIO(), encoding='iso-8859-15')
+        self.assertEqual(xml.encoding, u'iso-8859-15')
+
     def testUnicodeEuro(self):
         xml = _createXmlStringIoWriter()
         xml.text(u"\u20ac")
