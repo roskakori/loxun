@@ -1085,6 +1085,63 @@ class XmlWriter(object):
             self._possiblyFlushTag()
             self._possiblyWriteTag(namespace, name, XmlWriter._CLOSE_AT_START)
 
+
+    def endTags(self, count=0):
+        """
+        End tags is useful if you need to close a couple of tags in one command
+        it might be useful when you need to close a few root tags.
+
+        As example, consider the following writer with a namespace:
+
+            >>> from StringIO import StringIO
+            >>> out = StringIO()
+            >>> xml = XmlWriter(out)
+            >>> xml.addNamespace("xhtml", "http://www.w3.org/1999/xhtml")
+
+        Now start a couple of elements:
+
+            >>> xml.startTag("html")
+            >>> xml.startTag("xhtml:body")
+            >>> xml.startTag("xhtml:div")
+            >>> xml.startTag("xhtml:span")
+            >>> xml.startTag("xhtml:b")
+        
+        Try to end bad number of tags:
+
+            >>> xml.endTags(7) # actually there are 5 tags, not 7
+            Traceback (most recent call last):
+                ...
+            XmlError: cannot close 7 tags, 5 remaining
+
+        Try to end 2 tags:
+
+            >>> xml.endTags(2)
+
+        And now finally end all started tags:
+
+            >>> xml.endTags()
+
+        But if all the tags closed it will raise the same error as endTag
+
+            >>> xml.endTags()
+            Traceback (most recent call last):
+                ...
+            XmlError: tag stack must not be empty
+        """
+
+        stackLen = int(len(self._elementStack))
+        
+        if stackLen == 0:
+            raise XmlError("tag stack must not be empty")
+        if count == 0:
+            count = stackLen
+        elif stackLen < count:
+            raise XmlError("cannot close %d tags,"
+                           " %d remaining" % (count, stackLen))
+        
+        for i in xrange(count):
+            self.endTag()
+            
     def tag(self, qualifiedName, attributes={}):
         self._possiblyFlushTag()
         uniQualifiedName = self._unicodedFromString(qualifiedName)
@@ -1143,6 +1200,7 @@ class XmlWriter(object):
                 self.newline()
         else:
             self._writeEscaped(uniText)
+
 
     def comment(self, text, embedInBlanks=True):
         """
@@ -1214,6 +1272,7 @@ class XmlWriter(object):
         self._write(u"-->");
         if self._pretty:
             self.newline()
+
 
     def cdata(self, text):
         """
@@ -1343,7 +1402,53 @@ class XmlWriter(object):
         if remainingElements:
             raise XmlError(u"missing end tags must be added: %s" % remainingElements)
 
+
+class ChainXmlWriter(XmlWriter):
+    """
+    XmlWriter-wrapper for method chaining, here is an example:
+        >>> from StringIO import StringIO
+        >>> out = StringIO()
+        >>> xml = ChainXmlWriter(out)
+        >>> xml.addNamespace("xhtml", "http://www.w3.org/1999/xhtml") #doctest: +ELLIPSIS
+        <loxun.ChainXmlWriter object at 0x...>
+        >>> xml.startTag("xhtml:html").startTag("xhtml:body") #doctest: +ELLIPSIS
+        <loxun.ChainXmlWriter object at 0x...>
+        >>> xml.text("Hello world!").tag("xhtml:img", {"src": "smile.png", "alt": ":-)"}) #doctest: +ELLIPSIS
+        <loxun.ChainXmlWriter object at 0x...>
+        >>> xml.endTags().close()
+
+    And the result is:
+
+        >>> print out.getvalue().rstrip("\\r\\n")
+        <?xml version="1.0" encoding="utf-8"?>
+        <xhtml:html xmlns:xhtml="http://www.w3.org/1999/xhtml">
+          <xhtml:body>
+            Hello world!
+            <xhtml:img alt=":-)" src="smile.png" />
+          </xhtml:body>
+        </xhtml:html>
+    """
+
+    chainableMethods = ('addNamespace', 'cdata', 'comment', 'endTag',
+                        'endTags', 'processingInstruction', 'startTag', 'tag',
+                        'text',)
+
+    def _chainDecorator(self, func):
+        def _wrapper(*args, **kwargs):
+            func(*args, **kwargs)
+            return self
+        return _wrapper
+
+    def __getattribute__(self, name):
+
+        if name in ChainXmlWriter.chainableMethods:
+            originalMethod = getattr(super(ChainXmlWriter, self), name)
+            return self._chainDecorator(originalMethod)
+
+        return super(ChainXmlWriter, self).__getattribute__(name)
+
 if __name__ == "__main__":
     import doctest
     print "loxun %s: running doctest" % __version__
     doctest.testmod()
+
