@@ -1085,6 +1085,62 @@ class XmlWriter(object):
             self._possiblyFlushTag()
             self._possiblyWriteTag(namespace, name, XmlWriter._CLOSE_AT_START)
 
+    def endTags(self, count=0):
+        """
+        End tags is useful if you need to close a couple of tags in one command
+        it might be useful when you need to close a few root tags.
+
+        As example, consider the following writer with a namespace:
+
+            >>> from StringIO import StringIO
+            >>> out = StringIO()
+            >>> xml = XmlWriter(out)
+            >>> xml.addNamespace("xhtml", "http://www.w3.org/1999/xhtml")
+
+        Now start a couple of elements:
+
+            >>> xml.startTag("html")
+            >>> xml.startTag("xhtml:body")
+            >>> xml.startTag("xhtml:div")
+            >>> xml.startTag("xhtml:span")
+            >>> xml.startTag("xhtml:b")
+        
+        Try to end bad number of tags:
+
+            >>> xml.endTags(7) # actually there are 5 tags, not 7
+            Traceback (most recent call last):
+                ...
+            XmlError: cannot close 7 tags, 5 remaining
+
+        Try to end 2 tags:
+
+            >>> xml.endTags(2)
+
+        And now finally end all started tags:
+
+            >>> xml.endTags()
+
+        But if all the tags closed it will raise the same error as endTag
+
+            >>> xml.endTags()
+            Traceback (most recent call last):
+                ...
+            XmlError: tag stack must not be empty
+        """
+
+        stackLen = int(len(self._elementStack))
+        
+        if stackLen == 0:
+            raise XmlError("tag stack must not be empty")
+        if count == 0:
+            count = stackLen
+        elif stackLen < count:
+            raise XmlError("cannot close %d tags,"
+                           " %d remaining" % (count, stackLen))
+        
+        for i in xrange(count):
+            self.endTag()
+
     def tag(self, qualifiedName, attributes={}):
         self._possiblyFlushTag()
         uniQualifiedName = self._unicodedFromString(qualifiedName)
