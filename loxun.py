@@ -394,6 +394,14 @@ Some features other XML libraries support but I never saw any real use for:
 Version history
 ===============
 
+Version 1.3, 2012-01-01
+
+* Added ``endTags()`` to close several or all open tags (issue #3,
+  contributed by Anton Kolechkin).
+* Added `` ChainXmlWriter`` which is similar to ``XmlWriter``but allows to
+  chain methods for more concise source code (issue #3, contributed by Anton
+  Kolechkin).
+
 Version 1.2, 2011-03-12
 
 * Fixed ``AttributeError`` when ``XmlWriter(..., encoding=...)`` was set.
@@ -472,7 +480,7 @@ Version 0.1, 15-May-2010
 
 * Initial release.
 """
-# Copyright (C) 2010-2011 Thomas Aglassinger
+# Copyright (C) 2010-2012 Thomas Aglassinger
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License as published by
@@ -492,7 +500,7 @@ import re
 import xml.sax.saxutils
 from StringIO import StringIO
 
-__version__ = "1.2"
+__version__ = "1.3"
 
 class XmlError(Exception):
     """
@@ -1139,7 +1147,7 @@ class XmlWriter(object):
             raise XmlError("cannot close %d tags,"
                            " %d remaining" % (count, stackLen))
         
-        for i in xrange(count):
+        for _ in xrange(count):
             self.endTag()
             
     def tag(self, qualifiedName, attributes={}):
