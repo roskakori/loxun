@@ -398,7 +398,7 @@ Version 1.3, 2012-01-01
 
 * Added ``endTags()`` to close several or all open tags (issue #3,
   contributed by Anton Kolechkin).
-* Added `` ChainXmlWriter`` which is similar to ``XmlWriter``but allows to
+* Added ``ChainXmlWriter`` which is similar to ``XmlWriter`` and allows to
   chain methods for more concise source code (issue #3, contributed by Anton
   Kolechkin).
 
