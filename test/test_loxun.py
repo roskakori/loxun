@@ -72,24 +72,27 @@ class XmlWriterTest(unittest.TestCase):
     def testInitIndent(self):
         out = io.BytesIO()
         xml = loxun.XmlWriter(out, indent="\t")
-        self.assertEquals(xml._indent, "\t")
+        self.assertEqual(xml._indent, "\t")
         xml = loxun.XmlWriter(out, indent="    ")
-        self.assertEquals(xml._indent, "    ")
+        self.assertEqual(xml._indent, "    ")
         try:
             loxun.XmlWriter(out, indent="xxx")
         except AssertionError as error:
-            self.assertEquals(str(error), "`indent` must contain only blanks or tabs but also has: u'xxx'")
+            self.assertEqual(str(error), "`indent` must contain only blanks or tabs but also has: %r" % 'xxx')
 
     def testInitNewline(self):
         out = io.BytesIO()
         # FIXME: Add support to specify newLine as Unicode-string and convert it to bytes internally.
         for newline in [b"\r", b"\n", b"\r\n"]:
             xml = loxun.XmlWriter(out, newline=newline)
-            self.assertEquals(xml._newline, loxun.unicode_type(newline, "ascii"))
+            self.assertEqual(xml._newline, loxun.unicode_type(newline, "ascii"))
         try:
             loxun.XmlWriter(out, newline="xxx")
         except AssertionError as error:
-            self.assertEquals(str(error), "`newline` is u'xxx' but must be one of: [u'\\r', u'\\n', u'\\r\\n']")
+            actual_message = str(error)
+            expected_start_of_message = "`newline` is %r but must be one of: " % 'xxx'
+            self.assertTrue(actual_message.startswith(expected_start_of_message),
+                'error message %r must start with %r' % (actual_message, expected_start_of_message))
 
     def testIndentWithPretty(self):
         out = io.BytesIO()
@@ -100,7 +103,7 @@ class XmlWriterTest(unittest.TestCase):
         xml.text("some text")
         xml.endTag("b")
         xml.endTag("a")
-        self._assertXmlTextEqual(xml, ["<?xml version=\"1.0\" encoding=\"utf-8\"?>", "<a>", "\t<b>", "\t\t<c />", "\t\tsome text", "\t</b>", "</a>"])
+        self._assertXmlTextEqual(xml, [b"<?xml version=\"1.0\" encoding=\"utf-8\"?>", b"<a>", b"\t<b>", b"\t\t<c />", b"\t\tsome text", b"\t</b>", b"</a>"])
 
     def testDefautltIndentWithoutPretty(self):
         # Regression test for issue #1.
@@ -112,7 +115,7 @@ class XmlWriterTest(unittest.TestCase):
         xml.text("some text")
         xml.endTag("b")
         xml.endTag("a")
-        self._assertXmlTextEqual(xml, ["<?xml version=\"1.0\" encoding=\"utf-8\"?><a><b><c/>some text</b></a>"])
+        self._assertXmlTextEqual(xml, [b"<?xml version=\"1.0\" encoding=\"utf-8\"?><a><b><c/>some text</b></a>"])
 
     def testIsoEuro(self):
         out = io.BytesIO()
@@ -124,40 +127,40 @@ class XmlWriterTest(unittest.TestCase):
         xml = _createXmlStringIoWriter()
         xml.comment("some comment")
         xml.close()
-        self._assertXmlTextEqual(xml, ["<!-- some comment -->"])
+        self._assertXmlTextEqual(xml, [b"<!-- some comment -->"])
 
         xml = _createXmlStringIoWriter()
         xml.comment(" some comment ")
         xml.close()
-        self._assertXmlTextEqual(xml, ["<!-- some comment -->"])
+        self._assertXmlTextEqual(xml, [b"<!-- some comment -->"])
 
         xml = _createXmlStringIoWriter()
         xml.comment("")
         xml.close()
-        self._assertXmlTextEqual(xml, ["<!--  -->"])
+        self._assertXmlTextEqual(xml, [b"<!--  -->"])
 
         xml = _createXmlStringIoWriter()
         xml.comment("some comment", embedInBlanks=False)
         xml.close()
-        self._assertXmlTextEqual(xml, ["<!--some comment-->"])
+        self._assertXmlTextEqual(xml, [b"<!--some comment-->"])
 
     def testCommentWithMultipleLines(self):
         xml = _createXmlStringIoWriter()
         xml.comment("some comment\nspawning multiple\nlines")
         xml.close()
-        self._assertXmlTextEqual(xml, ["<!--", "some comment", "spawning multiple", "lines", "-->"])
+        self._assertXmlTextEqual(xml, [b"<!--", b"some comment", b"spawning multiple", b"lines", b"-->"])
 
         xml = _createXmlStringIoWriter()
         xml.startTag("tag")
         xml.comment("some comment\nspawning multiple\nlines")
         xml.endTag()
         xml.close()
-        self._assertXmlTextEqual(xml, ["<tag>", "  <!--", "  some comment", "  spawning multiple", "  lines", "  -->", "</tag>"])
+        self._assertXmlTextEqual(xml, [b"<tag>", b"  <!--", b"  some comment", b"  spawning multiple", b"  lines", b"  -->", b"</tag>"])
 
     def testBrokenComment(self):
         xml = _createXmlStringIoWriter()
-        self.assertRaises(loxun.XmlError, xml.comment, "--")
-        self.assertRaises(loxun.XmlError, xml.comment, "", embedInBlanks=False)
+        self.assertRaises(loxun.XmlError, xml.comment, b"--")
+        self.assertRaises(loxun.XmlError, xml.comment, b"", embedInBlanks=False)
         xml.close()
         self._assertXmlTextEqual(xml, [])
 
@@ -166,7 +169,7 @@ class XmlWriterTest(unittest.TestCase):
         xml.addNamespace("x", "http://xxx/");
         xml.tag("x:a")
         xml.close()
-        self._assertXmlTextEqual(xml, ["<x:a xmlns:x=\"http://xxx/\" />"])
+        self._assertXmlTextEqual(xml, [b"<x:a xmlns:x=\"http://xxx/\" />"])
 
     def testScopedNamespace(self):
         xml = _createXmlStringIoWriter()
@@ -181,12 +184,12 @@ class XmlWriterTest(unittest.TestCase):
         xml.endTag()
         xml.endTag()
         self._assertXmlTextEqual(xml, [
-            "<na:ta xmlns:na=\"ua\">",
-            "  <nb1:tb xmlns:nb1=\"ub1\" xmlns:nb2=\"ub2\" />",
-            "  <na:taa>",
-            "    <na:tab />",
-            "  </na:taa>",
-            "</na:ta>"
+            b"<na:ta xmlns:na=\"ua\">",
+            b"  <nb1:tb xmlns:nb1=\"ub1\" xmlns:nb2=\"ub2\" />",
+            b"  <na:taa>",
+            b"    <na:tab />",
+            b"  </na:taa>",
+            b"</na:ta>"
         ])
 
     def testBrokenScopedNamespacedTag(self):
@@ -219,7 +222,7 @@ class XmlWriterTest(unittest.TestCase):
                 raise ValueError("test")
         except ValueError as error:
             # Ignore expected error.
-            self.assertEquals(str(error), "test")
+            self.assertEqual(str(error), "test")
 
     def testPerformance(self):
         out = io.BytesIO()
@@ -271,5 +274,5 @@ def main():
 if __name__ == "__main__": # pragma: no cover
     logging.basicConfig()
     logging.getLogger("test_loxun").setLevel(logging.WARNING)
-    # FIXME: unittest.main()
-    sys.exit(main())
+    unittest.main()
+    # FIXME: sys.exit(main())
