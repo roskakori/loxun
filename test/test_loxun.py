@@ -18,14 +18,14 @@ Tests for loxun.
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # Allow "with" statement to be used in tests even for Python 2.5
-from __future__ import with_statement
+
 
 import doctest
 import logging
 import random
 import sys
 import unittest
-from StringIO import StringIO
+from io import StringIO
 
 import loxun
 
@@ -43,9 +43,9 @@ def _getXmlText(writer):
 _randy = random.Random()
 
 def _randomName():
-    result = u""
+    result = ""
     for _ in range(5 + _randy.randint(0, 10)):
-        result += unichr(_randy.randint(ord("a"), ord("z")))
+        result += chr(_randy.randint(ord("a"), ord("z")))
     return result
 
 class XmlWriterTest(unittest.TestCase):
@@ -55,32 +55,32 @@ class XmlWriterTest(unittest.TestCase):
     
     def testCanSetEncoding(self):
         xml = loxun.XmlWriter(StringIO(), encoding='iso-8859-15')
-        self.assertEqual(xml.encoding, u'iso-8859-15')
+        self.assertEqual(xml.encoding, 'iso-8859-15')
 
     def testUnicodeEuro(self):
         xml = _createXmlStringIoWriter()
-        xml.text(u"\u20ac")
+        xml.text("\u20ac")
         self._assertXmlTextEqual(xml, ["\xe2\x82\xac"])
 
     def testInitIndent(self):
         out = StringIO()
         xml = loxun.XmlWriter(out, indent="\t")
-        self.assertEquals(xml._indent, u"\t")
+        self.assertEquals(xml._indent, "\t")
         xml = loxun.XmlWriter(out, indent="    ")
-        self.assertEquals(xml._indent, u"    ")
+        self.assertEquals(xml._indent, "    ")
         try:
             loxun.XmlWriter(out, indent="xxx")
-        except AssertionError, error:
+        except AssertionError as error:
             self.assertEquals(str(error), "`indent` must contain only blanks or tabs but also has: u'xxx'")
 
     def testInitNewline(self):
         out = StringIO()
         for newline in ["\r", "\n", "\r\n"]:
             xml = loxun.XmlWriter(out, newline=newline)
-            self.assertEquals(xml._newline, unicode(newline, "ascii"))
+            self.assertEquals(xml._newline, str(newline, "ascii"))
         try:
             loxun.XmlWriter(out, newline="xxx")
-        except AssertionError, error:
+        except AssertionError as error:
             self.assertEquals(str(error), "`newline` is u'xxx' but must be one of: [u'\\r', u'\\n', u'\\r\\n']")
 
     def testIndentWithPretty(self):
@@ -209,9 +209,9 @@ class XmlWriterTest(unittest.TestCase):
             with loxun.XmlWriter(out) as xml:
                 xml.startTag("x")
                 raise ValueError("test")
-        except ValueError, error:
+        except ValueError as error:
             # Ignore expected error.
-            self.assertEquals(unicode(error), u"test")
+            self.assertEquals(str(error), "test")
 
     def testPerformance(self):
         out = StringIO()       
@@ -255,7 +255,7 @@ def main():
     testCount += testResults.testsRun
     failureCount += len(testResults.failures)
     errorCount += len(testResults.errors)
-    print "test_all: ran %d tests with %d failures and %d errors" % (testCount, failureCount, errorCount)
+    print("test_all: ran %d tests with %d failures and %d errors" % (testCount, failureCount, errorCount))
     if (errorCount + failureCount) > 0:
         result = 1
     return result

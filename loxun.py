@@ -498,7 +498,7 @@ import collections
 import os
 import re
 import xml.sax.saxutils
-from StringIO import StringIO
+from io import StringIO
 
 __version__ = "1.3"
 
@@ -509,7 +509,7 @@ class XmlError(Exception):
     pass
 
 def _quoted(value):
-    _assertIsUnicode(u"value", value)
+    _assertIsUnicode("value", value)
     return xml.sax.saxutils.quoteattr(value)
 
 def _validateNotEmpty(name, value):
@@ -518,7 +518,7 @@ def _validateNotEmpty(name, value):
     """
     assert name
     if not value:
-        raise XmlError(u"%s must not be empty" % name)
+        raise XmlError("%s must not be empty" % name)
 
 def _validateNotNone(name, value):
     """
@@ -526,7 +526,7 @@ def _validateNotNone(name, value):
     """
     assert name
     if value is None:
-        raise XmlError(u"%s must not be %r" % (name, None))
+        raise XmlError("%s must not be %r" % (name, None))
 
 def _validateNotNoneOrEmpty(name, value):
     """
@@ -536,8 +536,8 @@ def _validateNotNoneOrEmpty(name, value):
     _validateNotEmpty(name, value)
 
 def _assertIsUnicode(name, value):
-    assert (value is None) or isinstance(value, unicode), \
-        u"value for %r must be of type unicode but is: %r" % (name, value)
+    assert (value is None) or isinstance(value, str), \
+        "value for %r must be of type unicode but is: %r" % (name, value)
 
 def _splitPossiblyQualifiedName(name, value):
     """
@@ -561,28 +561,28 @@ def _splitPossiblyQualifiedName(name, value):
         XmlError: x must not be empty
     """
     assert name
-    _assertIsUnicode(u"name", name)
-    _assertIsUnicode(u"value", value)
+    _assertIsUnicode("name", name)
+    _assertIsUnicode("value", value)
 
-    colonIndex = value.find(u":")
+    colonIndex = value.find(":")
     if colonIndex == -1:
         _validateNotEmpty(name, value)
         result = (None, value)
     else:
         namespacePart = value[:colonIndex]
-        _validateNotEmpty(u"namespace part of %s", namespacePart)
+        _validateNotEmpty("namespace part of %s", namespacePart)
         namePart = value[colonIndex+1:]
-        _validateNotEmpty(u"name part of %s", namePart)
+        _validateNotEmpty("name part of %s", namePart)
         result = (namespacePart, namePart)
     # TODO: validate that all parts are NCNAMEs.
     return result
 
 def _joinPossiblyQualifiedName(namespace, name):
-    _assertIsUnicode(u"namespace", namespace)
+    _assertIsUnicode("namespace", namespace)
     assert name
-    _assertIsUnicode(u"name", name)
+    _assertIsUnicode("name", name)
     if namespace:
-        result = u"%s:%s" % (namespace, name)
+        result = "%s:%s" % (namespace, name)
     else:
         result = name
     return result
@@ -593,27 +593,27 @@ class XmlWriter(object):
     namespaces.
     """
     # Marks to start/end CDATA.
-    _CDATA_START = u"<![CDATA["
-    _CDATA_END = u"]]>"
+    _CDATA_START = "<![CDATA["
+    _CDATA_END = "]]>"
 
     # Marks to start/end processing instruction.
-    _PROCESSING_START = u"<?"
-    _PROCESSING_END = u"?>"
+    _PROCESSING_START = "<?"
+    _PROCESSING_END = "?>"
 
     # Possible value for _possiblyWriteTag()'s ``close`` parameter.
-    _CLOSE_NONE = u"none"
-    _CLOSE_AT_START = u"start"
-    _CLOSE_AT_END = u"end"
+    _CLOSE_NONE = "none"
+    _CLOSE_AT_START = "start"
+    _CLOSE_AT_END = "end"
 
     # Build regular expressions to validate tag and attribute names.
-    _NAME_START_CHARS = u"_a-zA-Z\u00c0-\u00d6\u00d8-\u00f6\00f8-\u02ff\u0370-\u037d\u037f-\u1fff\u200c-\u200d\u2070-\u218f\u2c00-\u2fef\u3001-\ud7ff\uf900-\ufdcf\ufdf0-\ufffd"
-    _NAME_CHARS = "\\-\\.0-9" + _NAME_START_CHARS + "\u00b7\u0300-\u036f\u203f-\u2040"
+    _NAME_START_CHARS = "_a-zA-Z\u00c0-\u00d6\u00d8-\u00f6\00f8-\u02ff\u0370-\u037d\u037f-\u1fff\u200c-\u200d\u2070-\u218f\u2c00-\u2fef\u3001-\ud7ff\uf900-\ufdcf\ufdf0-\ufffd"
+    _NAME_CHARS = "\\-\\.0-9" + _NAME_START_CHARS + "\\u00b7\\u0300-\\u036f\\u203f-\\u2040"
     _NAME_START_CHAR_PATTERN = "[" + _NAME_START_CHARS + "]"
     _NAME_CHAR_PATTERN = "[" + _NAME_CHARS + "]"
     _nameStartCharRegEx = re.compile(_NAME_START_CHAR_PATTERN, re.UNICODE)
     _nameCharRegEx = re.compile(_NAME_START_CHAR_PATTERN, re.UNICODE)
 
-    def __init__(self, output, pretty=True, indent=u"  ", newline=os.linesep, encoding=u"utf-8", errors=u"strict", prolog=True, version=u"1.0", sourceEncoding="ascii"):
+    def __init__(self, output, pretty=True, indent="  ", newline=os.linesep, encoding="utf-8", errors="strict", prolog=True, version="1.0", sourceEncoding="ascii"):
         """
         Initialize ``XmlWriter`` writing to ``output``.
 
@@ -673,15 +673,15 @@ class XmlWriter(object):
         # See also: `_possiblyWriteTag()`. 
         self._startTagToWrite = None
 
-        indentWithoutWhiteSpace = self._indent.replace(u" ", u"").replace(u"\t", u"")
+        indentWithoutWhiteSpace = self._indent.replace(" ", "").replace("\t", "")
         assert not indentWithoutWhiteSpace, \
             "`indent` must contain only blanks or tabs but also has: %r" % indentWithoutWhiteSpace
         self._newline = self._unicodedFromString(newline)
-        _VALID_NEWLINES = [u"\r", u"\n", u"\r\n"]
+        _VALID_NEWLINES = ["\r", "\n", "\r\n"]
         assert self._newline in _VALID_NEWLINES, \
             "`newline` is %r but must be one of: %s" % (self._newline, _VALID_NEWLINES)
         if prolog:
-            self.processingInstruction(u"xml", "version=%s encoding=%s" % ( \
+            self.processingInstruction("xml", "version=%s encoding=%s" % ( \
                 _quoted(self._unicodedFromString(version)),
                 _quoted(self._encoding))
             )
@@ -718,7 +718,7 @@ class XmlWriter(object):
 
     def _encoded(self, text):
         assert text is not None
-        _assertIsUnicode(u"text", text)
+        _assertIsUnicode("text", text)
         return text.encode(self._encoding, self._errors)
 
     def _unicodedFromString(self, text):
@@ -728,10 +728,10 @@ class XmlWriter(object):
         """
         if text is None:
             result = None
-        elif isinstance(text, unicode):
+        elif isinstance(text, str):
             result = text
         else:
-            result = unicode(text, self._sourceEncoding)
+            result = str(text, self._sourceEncoding)
         return result
 
     def _raiseStrOrUnicodeBroken(self, method, value, error):
@@ -744,7 +744,7 @@ class XmlWriter(object):
 
         someTypeName = type(value).__name__
         message = "%s.__%s()__ must return a value of type %s or %s but failed for value %r with: %s" % (
-            someTypeName, method, str.__name__, unicode.__name__, value, error
+            someTypeName, method, str.__name__, str.__name__, value, error
         )
         raise XmlError(message)
 
@@ -792,20 +792,20 @@ class XmlWriter(object):
         """
         if some is None:
             result = None
-        elif isinstance(some, unicode):
+        elif isinstance(some, str):
             result = some
         else:
             if isinstance(some, str):
                 result = some
             else:
                 try:
-                    result = unicode(some)
-                except Exception, error:
+                    result = str(some)
+                except Exception as error:
                     self._raiseStrOrUnicodeBroken("unicode", some, error)
-            if not isinstance(result, unicode):
+            if not isinstance(result, str):
                 try:
-                    result = unicode(some, self._sourceEncoding)
-                except Exception, error:
+                    result = str(some, self._sourceEncoding)
+                except Exception as error:
                     self._raiseStrOrUnicodeBroken("unicode", some, error)
         return result
 
@@ -830,14 +830,14 @@ class XmlWriter(object):
     def _elementName(self, name, namespace):
         assert name
         if namespace:
-            result = u"%s:%s" % (namespace, name)
+            result = "%s:%s" % (namespace, name)
         else:
             result = name
         return result
 
     def _validateIsOpen(self):
         if not self._isOpen:
-            raise XmlError(u"operation must be performed before writer is closed")
+            raise XmlError("operation must be performed before writer is closed")
 
     def _validateNamespaceItem(self, itemName, namespace, qualifiedName):
         if namespace:
@@ -854,11 +854,11 @@ class XmlWriter(object):
                     # TODO: raise XmlError("namespace '%s' must be added using `addNamespace()`.")
                     pass
                 else:
-                    raise XmlError(u"namespace '%s' for %s '%s' must be added before use" % (namespace, itemName, qualifiedName))
+                    raise XmlError("namespace '%s' for %s '%s' must be added before use" % (namespace, itemName, qualifiedName))
 
     def _write(self, text):
         assert text is not None
-        _assertIsUnicode(u"text", text)
+        _assertIsUnicode("text", text)
         self._output.write(self._encoded(text))
         if not self._contentHasBeenWritten and text:
             self._contentHasBeenWritten = True
@@ -898,7 +898,7 @@ class XmlWriter(object):
             (namespacesForScope != None) and (uniName in namespacesForScope)
         )
         if namespaceExists:
-            raise XmlError(u"namespace %r must added only once for current scope but already is %r" % (uniName, uniUri))
+            raise XmlError("namespace %r must added only once for current scope but already is %r" % (uniName, uniUri))
         self._namespacesToAdd.append((uniName, uniUri))
 
     def _possiblyWriteTag(self, namespace, name, close, attributes={}):
@@ -918,9 +918,9 @@ class XmlWriter(object):
             while self._namespacesToAdd:
                 namespaceName, uri = self._namespacesToAdd.pop()
                 if namespaceName:
-                    actualAttributes[u"xmlns:%s" % namespaceName] = uri
+                    actualAttributes["xmlns:%s" % namespaceName] = uri
                 else:
-                    actualAttributes[u"xmlns"] = uri
+                    actualAttributes["xmlns"] = uri
                 namespacesForScope = self._namespaces.get(self._scope())
                 if namespacesForScope == None:
                     namespacesForScope = []
@@ -931,23 +931,23 @@ class XmlWriter(object):
         else:
             if self._namespacesToAdd:
                 namespaceNames = ", ".join([name for name, _ in self._namespacesToAdd])
-                raise XmlError(u"namespaces must be added before startTag() or tag(): %s" % namespaceNames)
+                raise XmlError("namespaces must be added before startTag() or tag(): %s" % namespaceNames)
 
         # Convert attributes to unicode.
-        for qualifiedAttributeName, attributeValue in attributes.items():
+        for qualifiedAttributeName, attributeValue in list(attributes.items()):
             uniQualifiedAttributeName = self._unicodedFromString(qualifiedAttributeName)
-            attributeNamespace, attributeName = _splitPossiblyQualifiedName(u"attribute name", uniQualifiedAttributeName)
-            self._validateNamespaceItem(u"attribute", attributeNamespace, attributeName)
+            attributeNamespace, attributeName = _splitPossiblyQualifiedName("attribute name", uniQualifiedAttributeName)
+            self._validateNamespaceItem("attribute", attributeNamespace, attributeName)
             actualAttributes[uniQualifiedAttributeName] = self._unicoded(attributeValue)
 
         # Prepare indentation and qualified tag name to be written.
         if self.isPretty:
             indent = self._indent * len(self._elementStack)
         else:
-            indent = u""
-        self._validateNamespaceItem(u"tag", namespace, name)
+            indent = ""
+        self._validateNamespaceItem("tag", namespace, name)
         if namespace:
-            qualifiedTagName = u"%s:%s" % (namespace, name)
+            qualifiedTagName = "%s:%s" % (namespace, name)
         else:
             qualifiedTagName = name
 
@@ -973,20 +973,20 @@ class XmlWriter(object):
         assert attributes is not None
         if self._pretty:
             self._write(indent)
-        self._write(u"<")
+        self._write("<")
         if close == XmlWriter._CLOSE_AT_START:
-            self._write(u"/")
+            self._write("/")
         self._write(qualifiedTagName)
         for attributeName in sorted(attributes.keys()):
-            _assertIsUnicode(u"attribute name", attributeName)
+            _assertIsUnicode("attribute name", attributeName)
             value = attributes[attributeName]
-            _assertIsUnicode(u"value of attribute %r" % attributeName, value)
-            self._write(u" %s=%s" % (attributeName, _quoted(value)))
+            _assertIsUnicode("value of attribute %r" % attributeName, value)
+            self._write(" %s=%s" % (attributeName, _quoted(value)))
         if close == XmlWriter._CLOSE_AT_END:
             if self.isPretty:
-                self._write(u" ")
-            self._write(u"/")
-        self._write(u">")
+                self._write(" ")
+            self._write("/")
+        self._write(">")
         if self._pretty:
             self.newline()
 
@@ -1019,7 +1019,7 @@ class XmlWriter(object):
         """
         self._possiblyFlushTag()
         uniQualifiedName = self._unicodedFromString(qualifiedName)
-        namespace, name = _splitPossiblyQualifiedName(u"tag name", uniQualifiedName)
+        namespace, name = _splitPossiblyQualifiedName("tag name", uniQualifiedName)
         self._possiblyWriteTag(namespace, name, XmlWriter._CLOSE_NONE, attributes)
         self._elementStack.append((namespace, name))
 
@@ -1072,14 +1072,14 @@ class XmlWriter(object):
         try:
             (namespace, name) = self._elementStack.pop()
         except IndexError:
-            raise XmlError(u"tag stack must not be empty")
+            raise XmlError("tag stack must not be empty")
         actualQualifiedName = _joinPossiblyQualifiedName(namespace, name)
         if expectedQualifiedName:
             # Validate that actual tag name matches expected name.
             uniExpectedQualifiedName = self._unicodedFromString(expectedQualifiedName)
             if actualQualifiedName != expectedQualifiedName:
                 self._elementStack.append((namespace, name))
-                raise XmlError(u"tag name must be %s but is %s" % (uniExpectedQualifiedName, actualQualifiedName))
+                raise XmlError("tag name must be %s but is %s" % (uniExpectedQualifiedName, actualQualifiedName))
 
         isConsolidatableStartEndTag = False
         if self._startTagToWrite:
@@ -1147,13 +1147,13 @@ class XmlWriter(object):
             raise XmlError("cannot close %d tags,"
                            " %d remaining" % (count, stackLen))
         
-        for _ in xrange(count):
+        for _ in range(count):
             self.endTag()
             
     def tag(self, qualifiedName, attributes={}):
         self._possiblyFlushTag()
         uniQualifiedName = self._unicodedFromString(qualifiedName)
-        namespace, name = _splitPossiblyQualifiedName(u"tag name", uniQualifiedName)
+        namespace, name = _splitPossiblyQualifiedName("tag name", uniQualifiedName)
         self._possiblyWriteTag(namespace, name, XmlWriter._CLOSE_AT_END, attributes)
 
     def text(self, text):
@@ -1198,7 +1198,7 @@ class XmlWriter(object):
             </some>
         """
         self._possiblyFlushTag()
-        _validateNotNone(u"text", text)
+        _validateNotNone("text", text)
         uniText = self._unicodedFromString(text)
         if self._pretty:
             for uniLine in StringIO(uniText):
@@ -1253,18 +1253,18 @@ class XmlWriter(object):
         uniText = self._unicodedFromString(text)
         if not embedInBlanks and not uniText:
             raise XmlError("text for comment must not be empty, or option embedInBlanks=True must be set")
-        if u"--" in uniText:
+        if "--" in uniText:
             raise XmlError("text for comment must not contain \"--\"")
-        hasNewline = (u"\n" in uniText) or (u"\r" in uniText)
+        hasNewline = ("\n" in uniText) or ("\r" in uniText)
         hasStartBlank = uniText and uniText[0].isspace()
         hasEndBlank = (len(uniText) > 1) and uniText[-1].isspace()
         self._writePrettyIndent()
-        self._write(u"<!--");
+        self._write("<!--");
         if hasNewline:
             if self._pretty:
                 self.newline()
             elif embedInBlanks and not hasStartBlank:
-                self._write(u" ")
+                self._write(" ")
             for uniLine in StringIO(uniText):
                 if self._pretty:
                     self._writeIndent()
@@ -1273,11 +1273,11 @@ class XmlWriter(object):
             self._writePrettyIndent()
         else:
             if embedInBlanks and not hasStartBlank:
-                self._write(u" ")
+                self._write(" ")
             self._writeEscaped(uniText)
             if embedInBlanks and not hasEndBlank:
-                self._write(u" ")
-        self._write(u"-->");
+                self._write(" ")
+        self._write("-->");
         if self._pretty:
             self.newline()
 
@@ -1304,7 +1304,7 @@ class XmlWriter(object):
             <tag>&&&]]>
         """
         self._possiblyFlushTag()
-        self._rawBlock(u"CDATA section", XmlWriter._CDATA_START, XmlWriter._CDATA_END, text)
+        self._rawBlock("CDATA section", XmlWriter._CDATA_START, XmlWriter._CDATA_END, text)
 
     def processingInstruction(self, target, text):
         """
@@ -1326,20 +1326,20 @@ class XmlWriter(object):
             <?xsl-stylesheet href="some.xsl" type="text/xml"?>
         """
         self._possiblyFlushTag()
-        targetName = u"target for processing instrution"
+        targetName = "target for processing instrution"
         _validateNotNone(targetName, text)
         _validateNotEmpty(targetName, text)
         uniFullText = self._unicodedFromString(target)
         if text:
             uniFullText += " "
             uniFullText += self._unicodedFromString(text)
-        self._rawBlock(u"processing instruction", XmlWriter._PROCESSING_START, XmlWriter._PROCESSING_END, uniFullText)
+        self._rawBlock("processing instruction", XmlWriter._PROCESSING_START, XmlWriter._PROCESSING_END, uniFullText)
 
     def _rawBlock(self, name, start, end, text):
         _assertIsUnicode("name", name)
         _assertIsUnicode("start", start)
         _assertIsUnicode("end", end)
-        _validateNotNone(u"text for %s" % name, text)
+        _validateNotNone("text for %s" % name, text)
         uniText = self._unicodedFromString(text)
         if end in uniText:
             raise XmlError("text for %s must not contain \"%s\"" % (name, end))
@@ -1374,7 +1374,7 @@ class XmlWriter(object):
             >(^_^)<  not particular valid XML &&&
         """
         self._possiblyFlushTag()
-        _validateNotNone(u"text", text)
+        _validateNotNone("text", text)
         uniText = self._unicodedFromString(text)
         self._write(uniText)
 
@@ -1406,9 +1406,9 @@ class XmlWriter(object):
             if remainingElements:
                 remainingElements += ", "
             namespace, name = self._elementStack.pop()
-            remainingElements += u"</%s>" % self._elementName(name, namespace)
+            remainingElements += "</%s>" % self._elementName(name, namespace)
         if remainingElements:
-            raise XmlError(u"missing end tags must be added: %s" % remainingElements)
+            raise XmlError("missing end tags must be added: %s" % remainingElements)
 
 
 class ChainXmlWriter(XmlWriter):
@@ -1457,6 +1457,6 @@ class ChainXmlWriter(XmlWriter):
 
 if __name__ == "__main__":
     import doctest
-    print "loxun %s: running doctest" % __version__
+    print("loxun %s: running doctest" % __version__)
     doctest.testmod()
 

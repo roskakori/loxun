@@ -87,7 +87,7 @@ import loxun
 def _makeFolders(path):
     try:
         os.makedirs(path)
-    except OSError, error:
+    except OSError as error:
         if error.errno != errno.EEXIST:
             raise
 
@@ -107,7 +107,7 @@ class _ApiCommand(Command):
     def run(self):
         _makeFolders(os.path.join("build", "site", "api"))
         epydocCall = ["epydoc", "--config", "epydoc.config"]
-        print " ".join(epydocCall)
+        print(" ".join(epydocCall))
         subprocess.check_call(epydocCall)
 
 setup(
