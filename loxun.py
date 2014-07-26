@@ -11,7 +11,7 @@ loxun's features are:
 * **easy to use namespaces**: simply add a namespace and refer to it using the
   standard ``namespace:tag`` syntax.
 
-* **mix unicode and string**: pass both unicode or plain 8 bit strings to any
+* **mix unicode and io.BytesIO**: pass both unicode or plain 8 bit strings to any
   of the methods. Internally loxun converts them to unicode, so once a
   parameter got accepted by the API you can rely on it not causing any
   messy ``UnicodeError`` trouble.
@@ -29,10 +29,11 @@ loxun's features are:
 
 Here is a very basic example. First you have to create an output stream. In
 many cases this would be a file, but for the sake of simplicity we use a
-``StringIO`` here:
+``io.BytesIOIO`` here:
 
-    >>> from StringIO import StringIO
-    >>> out = StringIO()
+    >>> from __future__ import unicode_literals
+    >>> import io
+    >>> out = io.BytesIOIO()
 
 Then you can create an `XmlWriter` to write to this output:
 
@@ -69,8 +70,9 @@ To make it simple, the output goes to a string, but you could also use
 a file that has been created using
 ``codecs.open(filename, "wb", encoding)``.
 
-    >>> from StringIO import StringIO
-    >>> out = StringIO()
+    >>> from __future__ import unicode_literals
+    >>> import io
+    >>> out = io.BytesIO()
 
 First create an `XmlWriter` to write the XML code to the specified output:
 
@@ -118,8 +120,8 @@ Specifying attributes
 
 First create a writer:
 
-    >>> from StringIO import StringIO
-    >>> out = StringIO()
+    >>> import io
+    >>> out = io.BytesIO()
     >>> xml = XmlWriter(out)
 
 Now write the content:
@@ -144,7 +146,7 @@ Using namespaces
 Now the same thing but with a namespace. First create the prolog
 and header like above:
 
-    >>> out = StringIO()
+    >>> out = io.BytesIOIO()
     >>> xml = XmlWriter(out)
 
 Next add the namespace:
@@ -178,8 +180,8 @@ Sometimes you want to use characters outside the ASCII range, for example
 German Umlauts, the Euro symbol or Japanese Kanji. The easiest and performance
 wise best way is to use Unicode strings. For example:
 
-    >>> from StringIO import StringIO
-    >>> out = StringIO()
+    >>> import io
+    >>> out = io.BytesIO()
     >>> xml = XmlWriter(out, prolog=False)
     >>> xml.text(u"The price is \\u20ac 100") # Unicode of Euro symbol
     >>> out.getvalue().rstrip("\\r\\n")
@@ -193,14 +195,14 @@ Also notice that in the output the Euro symbol looks very different from the
 input. This is because the output encoding is UTF-8 (the default), which
 has the advantage of keeping all ASCII characters the same and turning any
 characters with a code of 128 or more into a sequence of 8 bit bytes that
-can easily fit into an output stream to a binary file or ``StringIO``.
+can easily fit into an output stream to a binary file or ``io.BytesIO``.
 
 If you have to stick to classic 8 bit string parameters, loxun attempts to
 convert them to unicode. By default it assumes ASCII encoding, which does
 not work out as soon as you use a character outside the ASCII range:
 
-    >>> from StringIO import StringIO
-    >>> out = StringIO()
+    >>> import io
+    >>> out = io.BytesIO()
     >>> xml = XmlWriter(out, prolog=False)
     >>> xml.text("The price is \\xa4 100") # ISO-8859-15 code of Euro symbol
     Traceback (most recent call last):
@@ -210,8 +212,8 @@ not work out as soon as you use a character outside the ASCII range:
 In this case you have to tell the writer the encoding you use by specifying
 the the ``sourceEncoding``:
 
-    >>> from StringIO import StringIO
-    >>> out = StringIO()
+    >>> import io
+    >>> out = io.BytesIO()
     >>> xml = XmlWriter(out, prolog=False, sourceEncoding="iso-8859-15")
 
 Now everything works out again:
@@ -232,7 +234,7 @@ By default, loxun starts a new line for each ``startTag`` and indents the
 content with two spaces. You can change the spaces to any number of spaces and
 tabs you like:
 
-    >>> out = StringIO()
+    >>> out = io.BytesIO()
     >>> xml = XmlWriter(out, indent="    ") # <-- Indent with 4 spaces.
     >>> xml.startTag("html")
     >>> xml.startTag("body")
@@ -251,7 +253,7 @@ tabs you like:
 You can disable pretty printing all together using ``pretty=False``, resulting
 in an output of a single large line:
 
-    >>> out = StringIO()
+    >>> out = io.BytesIO()
     >>> xml = XmlWriter(out, pretty=False) # <-- Disable pretty printing.
     >>> xml.startTag("html")
     >>> xml.startTag("body")
@@ -269,22 +271,22 @@ When you create a writer, it automatically write an XML prolog
 processing instruction to the output. This is what the default prolog
 looks like:
 
-    >>> from StringIO import StringIO
-    >>> out = StringIO()
+    >>> import io
+    >>> out = io.BytesIO()
     >>> xml = XmlWriter(out)
     >>> print out.getvalue().rstrip("\\r\\n")
     <?xml version="1.0" encoding="utf-8"?>
 
 You can change the version or encoding:
 
-    >>> out = StringIO()
+    >>> out = io.BytesIO()
     >>> xml = XmlWriter(out, encoding=u"ascii", version=u"1.1")
     >>> print out.getvalue().rstrip("\\r\\n")
     <?xml version="1.1" encoding="ascii"?>
 
 To completely omit the prolog, set the parameter ``prolog=False``:
 
-    >>> out = StringIO()
+    >>> out = io.BytesIO()
     >>> xml = XmlWriter(out, prolog=False)
     >>> out.getvalue()
     ''
@@ -297,15 +299,15 @@ documents. Here's an example that shows how to do it with loxun.
 
 First, create a writer:
 
-    >>> from StringIO import StringIO
-    >>> out = StringIO()
+    >>> import io
+    >>> out = io.BytesIO()
     >>> xml = XmlWriter(out)
 
 Let's add a document type definition:
 
     >>> xml.raw("<!DOCTYPE html PUBLIC \\"-//W3C//DTD XHTML 1.0 Strict//EN\\" SYSTEM \\"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\\">")
     >>> xml.newline()
-    
+
 Notice that loxun uses the generic `XmlWriter.raw()` for that, which allows to
 add any content without validation or escaping. You can do all sorts of nasty
 things with ``raw()`` that will result in invalid XML, but this is one of its
@@ -338,7 +340,7 @@ Optimization
 
 Loxun automatically optimized pairs of empty start/end tags. For example:
 
-    >>> out = StringIO()
+    >>> out = io.BytesIO()
     >>> xml = XmlWriter(out)
     >>> xml.startTag("customers")
     >>> xml.startTag("person", {"id": "12345", "name": "Doe, John"})
@@ -357,7 +359,7 @@ output only contains a simple ``<person ... />`` tag.
 Contributing
 ------------
 
-If you want to help improve loxun, you can access the source code at 
+If you want to help improve loxun, you can access the source code at
 <http://github.com/roskakori/loxun>.
 
 Future
@@ -384,7 +386,7 @@ of features that might be added at some point:
   when initializing an `XmlWriter`, it could be a optional parameter for
   `XmlWriter.startTag()` where it could be turned on and off as needed. And
   the property could be named ``literal`` instead of ``pretty`` (with an
-  inverse logic). 
+  inverse logic).
 * Add a ``DomWriter`` that creates a ``xml.dom.minidom.Document``.
 
 Some features other XML libraries support but I never saw any real use for:
@@ -432,14 +434,14 @@ Version 0.7, 03-Jul-2010
   between. For example, ``x.startTag("some"); x.endTag()`` results in
   ``<some />`` instead of ``<some></some>``.
 * Fixed handling of unknown name spaces. They now raise an `XmlError` instead
-   of ``ValueError``. 
+   of ``ValueError``.
 
 Version 0.6, 03-Jun-2010
 
 * Added option ``indent`` to specify the indentation text each new line starts with.
 * Added option ``newline`` to specify how lines written should end.
 * Fixed that `XmlWriter.tag()` did not remove namespaces declared immediately
-  before it. 
+  before it.
 * Cleaned up documentation.
 
 Version 0.5, 25-May-2010
@@ -494,13 +496,26 @@ Version 0.1, 15-May-2010
 #
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+from __future__ import unicode_literals
+
 import collections
+import io
 import os
 import re
+import sys
 import xml.sax.saxutils
-from io import StringIO
 
-__version__ = "1.3"
+__version__ = "2.0"
+
+
+# Compatibility helpers for Python 2 and 3.
+if sys.version_info[0] == 2:
+    bytes_type = str
+    unicode_type = unicode
+else:
+    bytes_type = bytes
+    unicode_type = str
+
 
 class XmlError(Exception):
     """
@@ -536,8 +551,8 @@ def _validateNotNoneOrEmpty(name, value):
     _validateNotEmpty(name, value)
 
 def _assertIsUnicode(name, value):
-    assert (value is None) or isinstance(value, str), \
-        "value for %r must be of type unicode but is: %r" % (name, value)
+    assert (value is None) or isinstance(value, unicode_type), \
+        "value for %r must be of type %s but is: %r" % (name, unicode_type.__name__, value)
 
 def _splitPossiblyQualifiedName(name, value):
     """
@@ -670,7 +685,7 @@ class XmlWriter(object):
         self._indent = self._unicodedFromString(indent)
 
         # `None` or a tuple of (indent, qualifiedTagName, attributes).
-        # See also: `_possiblyWriteTag()`. 
+        # See also: `_possiblyWriteTag()`.
         self._startTagToWrite = None
 
         indentWithoutWhiteSpace = self._indent.replace(" ", "").replace("\t", "")
@@ -728,23 +743,23 @@ class XmlWriter(object):
         """
         if text is None:
             result = None
-        elif isinstance(text, str):
+        elif isinstance(text, unicode_type):
             result = text
         else:
-            result = str(text, self._sourceEncoding)
+            result = unicode_type(text, self._sourceEncoding)
         return result
 
     def _raiseStrOrUnicodeBroken(self, method, value, error):
         """
         Raise `XmlError` pointing out the ``__str__()`` or ``__unicode__`` of
-        of the type of ``value`` must be implemented properly. 
+        of the type of ``value`` must be implemented properly.
         """
         assert method in ("str", "unicode")
         assert error is not None
 
         someTypeName = type(value).__name__
         message = "%s.__%s()__ must return a value of type %s or %s but failed for value %r with: %s" % (
-            someTypeName, method, str.__name__, str.__name__, value, error
+            someTypeName, method, unicode_type.__name__, bytes_type.__name__, value, error
         )
         raise XmlError(message)
 
@@ -752,11 +767,11 @@ class XmlWriter(object):
         """
         Same value as ``some`` but converted to unicode in case ``some`` is
         not already a unicode string. ``None`` remains ``None``.
-        
+
         Examples:
-        
-        >>> from StringIO import StringIO
-        >>> out = StringIO()
+
+        >>> import io
+        >>> out = io.BytesIO()
         >>> xml = XmlWriter(out)
         >>> xml._unicoded(u"abc")
         u'abc'
@@ -768,7 +783,7 @@ class XmlWriter(object):
         >>> import decimal
         >>> xml._unicoded(decimal.Decimal("123.45"))
         u'123.45'
-        
+
         In order for this to work, the type of ``some`` must have a proper
         implementation of ``__unicode()__`` or ``__str__``.
 
@@ -784,7 +799,7 @@ class XmlWriter(object):
         TypeError: coercing to Unicode: need string or buffer, int found
 
         Consequently, using a value of ``Broken`` as attribute value will fail too:
-        
+
         >>> xml.tag("someTag", {"someAttribute": Broken()}) #doctest: +ELLIPSIS
         Traceback (most recent call last):
         ...
@@ -792,19 +807,20 @@ class XmlWriter(object):
         """
         if some is None:
             result = None
-        elif isinstance(some, str):
+        elif isinstance(some, unicode_type):
             result = some
         else:
-            if isinstance(some, str):
+            if isinstance(some, bytes_type):
                 result = some
             else:
                 try:
-                    result = str(some)
+                    result = unicode_type(some)
                 except Exception as error:
                     self._raiseStrOrUnicodeBroken("unicode", some, error)
-            if not isinstance(result, str):
+            # Ensure that the caller implemented __str__ / __unicode__ properly.
+            if not isinstance(result, unicode_type):
                 try:
-                    result = str(some, self._sourceEncoding)
+                    result = unicode_type(some, self._sourceEncoding)
                 except Exception as error:
                     self._raiseStrOrUnicodeBroken("unicode", some, error)
         return result
@@ -818,7 +834,7 @@ class XmlWriter(object):
         """
         assert some
         return True
-    
+
     def _isNameChar(self, some):
         """
         NameChar ::= NameStartChar | "-" | "." | [0-9] | #xB7
@@ -826,7 +842,7 @@ class XmlWriter(object):
         """
         assert some
         return True
-        
+
     def _elementName(self, name, namespace):
         assert name
         if namespace:
@@ -961,7 +977,7 @@ class XmlWriter(object):
             scopeToRemove = self._scope()
             if scopeToRemove in self._namespaces:
                 del self._namespaces[scopeToRemove]
-            
+
     def _actuallyWriteTag(self, indent, qualifiedTagName, attributes, close):
         assert self._startTagToWrite is None
         assert indent is not None
@@ -997,7 +1013,7 @@ class XmlWriter(object):
         been written yet. In this case, write the tag now and set
         ``self._startTagToWrite`` to ``None``. This allows to optimize a sequence
         of ``startTag()``/ ``endTag()`` with the same tag to be changed to
-        a simple ``tag()``.        
+        a simple ``tag()``.
         """
         if self._startTagToWrite:
             indent, qualifiedTagName, attributes = self._startTagToWrite;
@@ -1030,8 +1046,8 @@ class XmlWriter(object):
 
         As example, consider the following writer with a namespace:
 
-            >>> from StringIO import StringIO
-            >>> out = StringIO()
+            >>> import io
+            >>> out = io.BytesIO()
             >>> xml = XmlWriter(out)
             >>> xml.addNamespace("xhtml", "http://www.w3.org/1999/xhtml")
 
@@ -1101,8 +1117,8 @@ class XmlWriter(object):
 
         As example, consider the following writer with a namespace:
 
-            >>> from StringIO import StringIO
-            >>> out = StringIO()
+            >>> import io
+            >>> out = io.BytesIO()
             >>> xml = XmlWriter(out)
             >>> xml.addNamespace("xhtml", "http://www.w3.org/1999/xhtml")
 
@@ -1113,7 +1129,7 @@ class XmlWriter(object):
             >>> xml.startTag("xhtml:div")
             >>> xml.startTag("xhtml:span")
             >>> xml.startTag("xhtml:b")
-        
+
         Try to end bad number of tags:
 
             >>> xml.endTags(7) # actually there are 5 tags, not 7
@@ -1138,7 +1154,7 @@ class XmlWriter(object):
         """
 
         stackLen = int(len(self._elementStack))
-        
+
         if stackLen == 0:
             raise XmlError("tag stack must not be empty")
         if count == 0:
@@ -1146,10 +1162,10 @@ class XmlWriter(object):
         elif stackLen < count:
             raise XmlError("cannot close %d tags,"
                            " %d remaining" % (count, stackLen))
-        
+
         for _ in range(count):
             self.endTag()
-            
+
     def tag(self, qualifiedName, attributes={}):
         self._possiblyFlushTag()
         uniQualifiedName = self._unicodedFromString(qualifiedName)
@@ -1162,8 +1178,8 @@ class XmlWriter(object):
 
         Using a writer like
 
-            >>> from StringIO import StringIO
-            >>> out = StringIO()
+            >>> import io
+            >>> out = io.BytesIO()
             >>> xml = XmlWriter(out, prolog=False)
 
         you can write some text:
@@ -1174,7 +1190,7 @@ class XmlWriter(object):
 
         If ``text`` contains line feeds, the will be normalized to `newline()`:
 
-            >>> out = StringIO()
+            >>> out = io.BytesIO()
             >>> xml = XmlWriter(out, prolog=False)
             >>> xml.startTag("some")
             >>> xml.text("a text\\nwith multiple lines\\n    and indentation and trailing blanks   ")
@@ -1188,7 +1204,7 @@ class XmlWriter(object):
 
         Empty text does not result in any output:
 
-            >>> out = StringIO()
+            >>> out = io.BytesIO()
             >>> xml = XmlWriter(out, prolog=False)
             >>> xml.startTag("some")
             >>> xml.text("")
@@ -1201,7 +1217,7 @@ class XmlWriter(object):
         _validateNotNone("text", text)
         uniText = self._unicodedFromString(text)
         if self._pretty:
-            for uniLine in StringIO(uniText):
+            for uniLine in io.StringIO(uniText):
                 self._writeIndent()
                 uniLine = uniLine.lstrip(" \t").rstrip(" \t\r\n")
                 self._writeEscaped(uniLine)
@@ -1216,8 +1232,8 @@ class XmlWriter(object):
 
         As example set up a writer:
 
-            >>> from StringIO import StringIO
-            >>> out = StringIO()
+            >>> import io
+            >>> out = io.BytesIO()
             >>> xml = XmlWriter(out, prolog=False)
 
         Now add the comment
@@ -1232,8 +1248,8 @@ class XmlWriter(object):
         A comment can spawn multiple lines. If pretty is enabled, the lines
         will be indented. Again, first set up a writer:
 
-            >>> from StringIO import StringIO
-            >>> out = StringIO()
+            >>> import io
+            >>> out = io.BytesIO()
             >>> xml = XmlWriter(out, prolog=False)
 
         Then add the comment
@@ -1265,7 +1281,7 @@ class XmlWriter(object):
                 self.newline()
             elif embedInBlanks and not hasStartBlank:
                 self._write(" ")
-            for uniLine in StringIO(uniText):
+            for uniLine in io.StringIO(uniText):
                 if self._pretty:
                     self._writeIndent()
                 self._writeEscaped(uniLine.rstrip("\n\r"))
@@ -1288,8 +1304,8 @@ class XmlWriter(object):
 
         As example set up a writer:
 
-            >>> from StringIO import StringIO
-            >>> out = StringIO()
+            >>> import io
+            >>> out = io.BytesIO()
             >>> xml = XmlWriter(out, prolog=False)
 
         Now add the CDATA section:
@@ -1312,8 +1328,8 @@ class XmlWriter(object):
 
         As example set up a writer:
 
-            >>> from StringIO import StringIO
-            >>> out = StringIO()
+            >>> import io
+            >>> out = io.BytesIO()
             >>> xml = XmlWriter(out, prolog=False)
 
         Now add the processing instruction:
@@ -1355,8 +1371,8 @@ class XmlWriter(object):
 
         Using a writer like
 
-            >>> from StringIO import StringIO
-            >>> out = StringIO()
+            >>> import io
+            >>> out = io.BytesIO()
             >>> xml = XmlWriter(out, prolog=False)
 
         you can use ``raw`` for good and add for exmaple a doctype declaration:
@@ -1367,7 +1383,7 @@ class XmlWriter(object):
 
         but you can also do all sorts of evil things which can invalidate the XML document:
 
-            >>> out = StringIO()
+            >>> out = io.BytesIO()
             >>> xml = XmlWriter(out, prolog=False)
             >>> xml.raw(">(^_^)<  not particular valid XML &&&")
             >>> print out.getvalue().rstrip("\\r\\n")
@@ -1385,8 +1401,8 @@ class XmlWriter(object):
 
         Using a writer like
 
-            >>> from StringIO import StringIO
-            >>> out = StringIO()
+            >>> import io
+            >>> out = io.BytesIO()
             >>> xml = XmlWriter(out)
 
         you can write a tag without closing it:
@@ -1414,8 +1430,8 @@ class XmlWriter(object):
 class ChainXmlWriter(XmlWriter):
     """
     XmlWriter-wrapper for method chaining, here is an example:
-        >>> from StringIO import StringIO
-        >>> out = StringIO()
+        >>> import io
+        >>> out = io.BytesIO()
         >>> xml = ChainXmlWriter(out)
         >>> xml.addNamespace("xhtml", "http://www.w3.org/1999/xhtml") #doctest: +ELLIPSIS
         <loxun.ChainXmlWriter object at 0x...>
