@@ -128,10 +128,10 @@ setup(
         "License :: OSI Approved :: GNU Library or Lesser General Public License (LGPL)",
         "Natural Language :: English",
         "Operating System :: OS Independent",
-        # TODO: Test with Python 2.4. Who knows, it might actually work.
-        "Programming Language :: Python :: 2.5",
         "Programming Language :: Python :: 2.6",
         "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: 3.3",
+        "Programming Language :: Python :: 3.4",
         "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
         "Topic :: Software Development :: Libraries",
         "Topic :: Text Processing :: Markup :: XML",

@@ -29,11 +29,11 @@ loxun's features are:
 
 Here is a very basic example. First you have to create an output stream. In
 many cases this would be a file, but for the sake of simplicity we use a
-``io.BytesIOIO`` here:
+``io.BytesIO`` here:
 
     >>> from __future__ import unicode_literals
     >>> import io
-    >>> out = io.BytesIOIO()
+    >>> out = io.BytesIO()
 
 Then you can create an `XmlWriter` to write to this output:
 
@@ -66,9 +66,8 @@ Writing a simple document
 
 The following example creates a very simple XHTML document.
 
-To make it simple, the output goes to a string, but you could also use
-a file that has been created using
-``codecs.open(filename, "wb", encoding)``.
+To make it simple, the output goes to a ``BytesIO``, but you could also use
+a binary file that has been created using ``io.open(filename, "wb")``.
 
     >>> from __future__ import unicode_literals
     >>> import io
@@ -146,7 +145,7 @@ Using namespaces
 Now the same thing but with a namespace. First create the prolog
 and header like above:
 
-    >>> out = io.BytesIOIO()
+    >>> out = io.BytesIO()
     >>> xml = XmlWriter(out)
 
 Next add the namespace:
@@ -395,6 +394,16 @@ Some features other XML libraries support but I never saw any real use for:
 
 Version history
 ===============
+
+Version 2.0, 2014-07-28
+
+* Added support for Python 3.2+ while retaining the option to run with
+  Python 2.6+ (issue #5; thanks go to `Stefan Schwarzer`_ who offered his
+  guidance during a "Python 2 to 3" sprint at EuroPython 2014).
+* Dropped support for Python 2.5, keep using loxun 1.3 if you are stuck
+  with with this version.
+
+.. _Stefan Schwarzer: http://www.sschwarzer.net
 
 Version 1.3, 2012-01-01
 
